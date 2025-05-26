@@ -25,13 +25,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   useEffect(() => {
     // Check if user is already logged in
-    const storedUser = authService.getCurrentUser();
     const storedToken = authService.getToken();
-
-    if (storedUser && storedToken && authService.isAuthenticated()) {
-      setUser(storedUser);
-      setToken(storedToken);
+    
+    if (storedToken && authService.isAuthenticated()) {
+      // Token is valid, restore user from localStorage
+      const storedUser = authService.getCurrentUser();
+      if (storedUser) {
+        setUser(storedUser);
+        setToken(storedToken);
+      } else {
+        // If user data is corrupted, logout
+        authService.logout();
+      }
     } else {
+      // Token is invalid or expired
       authService.logout();
     }
 
@@ -62,7 +69,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     logout,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user && !!token && authService.isAuthenticated(),
     isAdmin: user?.role === 'admin',
   };
 

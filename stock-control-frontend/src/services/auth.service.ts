@@ -9,16 +9,20 @@ class AuthService {
     
     // Parse user info from token
     const decoded = parseJwt(token);
-    const userId = decoded?.UserId || decoded?.sub;
     
-    // Get user details
-    const userResponse = await api.get<User>(`/user/${userId}`);
-    const user = userResponse.data;
+    // Create user from token data (without fetching from backend)
+    const user: User = {
+  id: parseInt(decoded.userId), // agora com 'userId' em minúsculo
+  name: decoded.email.split('@')[0], // nome baseado no e-mail
+  email: decoded.email,
+  role: decoded.role as 'admin' | 'operator',
+  createdAt: new Date().toISOString()
+};
     
     // Store in localStorage
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('userId', userId);
+    localStorage.setItem('userId', decoded.UserId);
     
     return { token, user };
   }
