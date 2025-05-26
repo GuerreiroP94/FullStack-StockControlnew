@@ -16,6 +16,7 @@ import MovementsListPage from './pages/movements/MovementsListPage';
 import MovementFormPage from './pages/movements/MovementFormPage';
 import AlertsPage from './pages/alerts/AlertsPage';
 import UsersPage from './pages/users/UsersPage';
+import SettingsPage from './pages/settings/SettingsPage';
 
 function App() {
   return (
@@ -50,6 +51,9 @@ function App() {
               
               {/* Users - Admin Only */}
               <Route path="/users" element={<UsersPage />} />
+
+              {/* Settings - User Logged */}
+              <Route path="/settings" element={<SettingsPage />} />
             </Route>
           </Route>
 
