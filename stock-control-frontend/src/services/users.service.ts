@@ -32,6 +32,19 @@ class UsersService {
   async delete(id: number): Promise<void> {
     await api.delete(`/user/${id}`);
   }
+
+  // Novo método para validar senha
+  async validatePassword(userId: number, password: string): Promise<boolean> {
+    try {
+      const response = await api.post(`/user/${userId}/validate-password`, {
+        password
+      });
+      return response.data.isValid;
+    } catch (error) {
+      console.error('Erro ao validar senha:', error);
+      return false;
+    }
+  }
 }
 
 export default new UsersService();

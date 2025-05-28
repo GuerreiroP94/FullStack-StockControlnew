@@ -140,6 +140,7 @@ export interface AuthContextType {
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateCurrentUser: (user: User) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
 }

@@ -31,12 +31,15 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend",
         builder =>
         {
-            builder.WithOrigins("http://localhost:5173") // Porta do Vite
-                   .AllowAnyHeader()
-                   .AllowAnyMethod();
+            builder.WithOrigins(
+                "http://localhost:3000",  // Create React App
+                "http://localhost:5173"   // Vite
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials(); // Importante para cookies/auth
         });
 });
-
 // Serviços padrões da aplicação
 builder.Services.AddProjectDependencies(builder.Configuration); // Adiciona a DI do projeto (com configuração)
 builder.Services.AddControllers();         // Habilita os controllers

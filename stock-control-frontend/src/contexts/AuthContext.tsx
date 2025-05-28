@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import authService from '../services/auth.service';
 import { User, AuthContextType } from '../types';
 
@@ -21,25 +20,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
+    const storedUser = authService.getCurrentUser();
     const storedToken = authService.getToken();
-    
-    if (storedToken && authService.isAuthenticated()) {
-      // Token is valid, restore user from localStorage
-      const storedUser = authService.getCurrentUser();
-      if (storedUser) {
-        setUser(storedUser);
-        setToken(storedToken);
-      } else {
-        // If user data is corrupted, logout
-        authService.logout();
-      }
-    } else {
-      // Token is invalid or expired
-      authService.logout();
+
+    if (storedUser && storedToken && authService.isAuthenticated()) {
+      setUser(storedUser);
+      setToken(storedToken);
     }
 
     setLoading(false);
@@ -50,7 +38,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const { token, user } = await authService.login({ email, password });
       setUser(user);
       setToken(token);
-      navigate('/dashboard');
     } catch (error) {
       authService.logout();
       throw error;
@@ -61,7 +48,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     authService.logout();
     setUser(null);
     setToken(null);
-    navigate('/login');
+  };
+
+  const updateCurrentUser = (updatedUser: User) => {
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
   const value: AuthContextType = {
@@ -69,7 +60,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     token,
     login,
     logout,
-    isAuthenticated: !!user && !!token && authService.isAuthenticated(),
+    updateCurrentUser,
+    isAuthenticated: !!user && !!token,
     isAdmin: user?.role === 'admin',
   };
 

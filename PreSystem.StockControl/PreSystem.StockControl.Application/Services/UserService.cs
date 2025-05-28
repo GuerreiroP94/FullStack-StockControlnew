@@ -115,6 +115,29 @@ namespace PreSystem.StockControl.Application.Services
             return true;
         }
 
+        /// <summary>
+        /// Valida se a senha fornecida corresponde à senha atual do usuário
+        /// </summary>
+        /// <param name="userId">ID do usuário para validação</param>
+        /// <param name="password">Senha em texto plano a ser verificada</param>
+        /// <returns>True se a senha estiver correta, false caso contrário</returns>
+        /// <exception cref="InvalidOperationException">Lançada quando o usuário não é encontrado</exception>
+        public async Task<bool> ValidatePasswordAsync(int userId, string password)
+        {
+            // Busca o usuário no repositório
+            var user = await _userRepository.GetByIdAsync(userId);
 
+            // Se o usuário não existir, lança exceção
+            if (user == null)
+            {
+                throw new InvalidOperationException($"Usuário com ID {userId} não encontrado.");
+            }
+
+            // Verifica se a senha fornecida corresponde ao hash armazenado no banco
+            // BCrypt.Verify compara a senha em texto plano com o hash
+            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(password, user.PasswordHash);
+
+            return isPasswordValid;
+        }
     }
 }

@@ -37,10 +37,12 @@ namespace PreSystem.StockControl.WebApi.Controllers
             // 2. Criação das claims incluindo role e ID
             var claims = new[]
             {
-                new Claim(ClaimTypes.Name, user.Email),
-                new Claim("role", user.Role ?? "User"),
-                new Claim("UserId", user.Id.ToString())
-            };
+    new Claim(ClaimTypes.Name, user.Email),
+    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()), // Esta linha garante o UserId
+    new Claim("UserId", user.Id.ToString()), 
+    new Claim("role", user.Role ?? "User")
+};
+
 
             // 3. Pega os dados do appsettings.json
             var jwtSettings = _configuration.GetSection("JwtSettings");

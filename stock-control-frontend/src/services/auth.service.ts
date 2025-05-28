@@ -1,33 +1,46 @@
+// src/services/auth.service.ts
 import { api } from './api';
 import { UserLogin, AuthResponse, User } from '../types';
 import { parseJwt } from '../utils/helpers';
 
 class AuthService {
   async login(credentials: UserLogin): Promise<{ token: string; user: User }> {
+    // 1. Faz o login e obtém o token
     const response = await api.post<AuthResponse>('/auth/login', credentials);
     const { token } = response.data;
     
-    // Parse user info from token
-    const decoded = parseJwt(token);
-    
-    // Create user from token data (without fetching from backend)
-    const user: User = {
-  id: parseInt(decoded.userId), // agora com 'userId' em minúsculo
-  name: decoded.email.split('@')[0], // nome baseado no e-mail
-  email: decoded.email,
-  role: decoded.role as 'admin' | 'operator',
-  createdAt: new Date().toISOString()
-};
-    
-    // Store in localStorage
+    // 2. IMPORTANTE: Armazena o token IMEDIATAMENTE
     localStorage.setItem('token', token);
+    
+    // 3. IMPORTANTE: Configura o token no Axios ANTES de fazer outras requisições
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    
+    // 4. Parse user info from token
+    const decoded = parseJwt(token);
+    const userId = decoded?.UserId || decoded?.userId || decoded?.sub;
+    
+    if (!userId) {
+      throw new Error('ID do usuário não encontrado no token');
+    }
+    
+    // 5. Armazena o userId para uso futuro
+    localStorage.setItem('userId', userId);
+    
+    // 6. AGORA sim, busca os detalhes do usuário (com o token já configurado)
+    const userResponse = await api.get<User>(`/user/${userId}`);
+    const user = userResponse.data;
+    
+    // 7. Armazena os dados do usuário
     localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('userId', decoded.UserId);
     
     return { token, user };
   }
 
   logout(): void {
+    // Remove o token dos headers do Axios
+    delete api.defaults.headers.common['Authorization'];
+    
+    // Limpa o localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userId');
@@ -42,6 +55,10 @@ class AuthService {
     } catch {
       return null;
     }
+  }
+
+  getCurrentUserId(): string | null {
+    return localStorage.getItem('userId');
   }
 
   getToken(): string | null {

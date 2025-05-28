@@ -21,5 +21,13 @@ namespace PreSystem.StockControl.Application.Interfaces.Services
         // Atualização de usuário por admin
         Task<bool> UpdateUserByAdminAsync(int id, UserUpdateDto dto);
 
+        /// <summary>
+        /// Valida se a senha fornecida corresponde à senha atual do usuário
+        /// </summary>
+        /// <param name="userId">ID do usuário</param>
+        /// <param name="password">Senha a ser validada</param>
+        /// <returns>True se a senha estiver correta, false caso contrário</returns>
+        Task<bool> ValidatePasswordAsync(int userId, string password);
+
     }
 }
