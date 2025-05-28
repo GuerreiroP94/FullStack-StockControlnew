@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Package,
@@ -9,13 +9,12 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Cpu,
-  Settings,
-  LogOut,
-  User
+  ShoppingBag,
+  PlusCircle
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getInitials } from '../../utils/helpers';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -23,8 +22,9 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
-  const { isAdmin, user, logout } = useAuth();
-  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+  const location = useLocation();
+  const [productsSubmenuOpen, setProductsSubmenuOpen] = useState(false);
 
   const menuItems = [
     {
@@ -43,7 +43,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
       path: '/products',
       name: 'Produtos',
       icon: Package,
-      show: true
+      show: true,
+      hasSubmenu: true,
+      submenu: [
+        {
+          path: '/products',
+          name: 'Produtos Criados',
+          icon: ShoppingBag
+        },
+        {
+          path: '/products/new',
+          name: 'Criar Produto',
+          icon: PlusCircle
+        }
+      ]
     },
     {
       path: '/movements',
@@ -67,10 +80,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
   const filteredMenuItems = menuItems.filter(item => item.show);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const isProductsActive = location.pathname.startsWith('/products');
 
   return (
     <aside className={`fixed left-0 top-0 h-full bg-white shadow-lg transition-all duration-300 z-30 ${
@@ -95,72 +105,77 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           </button>
         </div>
 
-        {/* User Info Section */}
-        {isOpen && (
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
-                {user && getInitials(user.name)}
-              </div>
-              <div>
-                <p className="text-sm font-medium text-gray-800">{user?.name}</p>
-                <p className="text-xs text-gray-500">
-                  {user?.role === 'admin' ? 'Administrador' : 'Operador'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Menu Items */}
-        <nav className="flex-1 py-4 px-2 overflow-y-auto">
+        <nav className="flex-1 py-4 px-2">
           {filteredMenuItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg transition-all duration-200
-                ${isActive 
-                  ? 'bg-blue-50 text-blue-600' 
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                }
-              `}
-              title={!isOpen ? item.name : undefined}
-            >
-              <item.icon size={20} />
-              {isOpen && <span className="font-medium">{item.name}</span>}
-            </NavLink>
+            <div key={item.path}>
+              {item.hasSubmenu ? (
+                <>
+                  <button
+                    onClick={() => setProductsSubmenuOpen(!productsSubmenuOpen)}
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2.5 mb-1 rounded-lg transition-all duration-200
+                      ${isProductsActive 
+                        ? 'bg-blue-50 text-blue-600' 
+                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                      }
+                    `}
+                    title={!isOpen ? item.name : undefined}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon size={20} />
+                      {isOpen && <span className="font-medium">{item.name}</span>}
+                    </div>
+                    {isOpen && (
+                      <ChevronDown 
+                        size={16} 
+                        className={`transition-transform duration-200 ${
+                          productsSubmenuOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    )}
+                  </button>
+                  
+                  {isOpen && productsSubmenuOpen && item.submenu && (
+                    <div className="ml-4 mt-1 space-y-1">
+                      {item.submenu.map((subItem) => (
+                        <NavLink
+                          key={subItem.path}
+                          to={subItem.path}
+                          className={({ isActive }) => `
+                            flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200
+                            ${isActive 
+                              ? 'bg-blue-50 text-blue-600' 
+                              : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                            }
+                          `}
+                        >
+                          <subItem.icon size={18} />
+                          <span className="text-sm font-medium">{subItem.name}</span>
+                        </NavLink>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg transition-all duration-200
+                    ${isActive 
+                      ? 'bg-blue-50 text-blue-600' 
+                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
+                    }
+                  `}
+                  title={!isOpen ? item.name : undefined}
+                >
+                  <item.icon size={20} />
+                  {isOpen && <span className="font-medium">{item.name}</span>}
+                </NavLink>
+              )}
+            </div>
           ))}
         </nav>
-
-        {/* Bottom Section - Settings and Logout */}
-        <div className="border-t border-gray-200">
-          <nav className="p-2">
-            <NavLink
-              to="/settings"
-              className={({ isActive }) => `
-                flex items-center gap-3 px-3 py-2.5 mb-1 rounded-lg transition-all duration-200
-                ${isActive 
-                  ? 'bg-blue-50 text-blue-600' 
-                  : 'text-gray-600 hover:bg-gray-100 hover:text-gray-800'
-                }
-              `}
-              title={!isOpen ? 'Configurações' : undefined}
-            >
-              <Settings size={20} />
-              {isOpen && <span className="font-medium">Configurações</span>}
-            </NavLink>
-            
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-red-600 hover:bg-red-50"
-              title={!isOpen ? 'Sair' : undefined}
-            >
-              <LogOut size={20} />
-              {isOpen && <span className="font-medium">Sair</span>}
-            </button>
-          </nav>
-        </div>
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200">

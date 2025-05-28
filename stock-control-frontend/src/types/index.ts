@@ -31,16 +31,46 @@ export interface Component {
   name: string;
   description?: string;
   group: string;
+  device?: string;
+  value?: string;
+  package?: string;
   quantityInStock: number;
   minimumQuantity: number;
+  price?: number;
+  environment?: 'estoque' | 'laboratorio';
+  drawer?: string;
+  division?: string;
+  ncm?: string;
+  nve?: string;
+  internalCode?: string;
+  characteristics?: string;
+  createdAt?: string;
 }
 
 export interface ComponentCreate {
   name: string;
   description?: string;
   group: string;
+  device?: string;
+  value?: string;
+  package?: string;
   quantityInStock: number;
   minimumQuantity: number;
+  price?: number;
+  environment?: 'estoque' | 'laboratorio';
+  drawer?: string;
+  division?: string;
+  ncm?: string;
+  nve?: string;
+  internalCode?: string;
+  characteristics?: string;
+}
+
+// Component Stock Movement
+export interface ComponentStockEntry {
+  componentId: number;
+  entryQuantity?: number;
+  exitQuantity?: number;
 }
 
 // Product Types

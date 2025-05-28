@@ -24,6 +24,11 @@ export const COMPONENT_GROUPS = [
   'Outros'
 ];
 
+export const COMPONENT_ENVIRONMENTS = {
+  STOCK: 'estoque',
+  LAB: 'laboratorio'
+} as const;
+
 export const MOVEMENT_TYPES = {
   ENTRADA: 'Entrada',
   SAIDA: 'Saida'
