@@ -102,12 +102,20 @@ const ComponentsListPage: React.FC = () => {
       const uniquePackages = Array.from(new Set(data.map(c => c.package).filter(Boolean)));
       const uniqueValues = Array.from(new Set(data.map(c => c.value).filter(Boolean)));
 
-      setFilterOptions({
-        groups: uniqueGroups as string[],
-        devices: uniqueDevices as string[],
-        packages: uniquePackages as string[],
-        values: uniqueValues as string[]
-      });
+      // Atualizar os dropdowns com valores únicos, mantendo os valores padrão
+if (uniqueGroups.length > 0) {
+  setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
+}
+if (uniqueDevices.length > 0) {
+  setDevices(uniqueDevices as string[]);
+}
+if (uniquePackages.length > 0) {
+  setPackages(uniquePackages as string[]);
+}
+if (uniqueValues.length > 0) {
+  setValues(uniqueValues as string[]);
+}
+
     } catch (error) {
       setError('Erro ao carregar componentes');
       console.error(error);

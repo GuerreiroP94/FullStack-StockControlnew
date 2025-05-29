@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Package, Plus, Trash2, Search, Cpu, Calculator, FileSpreadsheet } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Save, 
+  Package, 
+  Plus, 
+  Trash2, 
+  Search, 
+  Cpu,
+  Calculator,
+  FileSpreadsheet,
+  AlertCircle
+} from 'lucide-react';
 import productsService from '../../services/products.service';
 import componentsService from '../../services/components.service';
 import exportService from '../../services/export.service';
@@ -10,26 +21,45 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
 
+interface ProductionCalculation {
+  componentId: number;
+  componentName: string;
+  device?: string;
+  value?: string;
+  package?: string;
+  characteristics?: string;
+  internalCode?: string;
+  drawer?: string;
+  division?: string;
+  quantityPerUnit: number;
+  totalRequired: number;
+  currentStock: number;
+  suggestedPurchase: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
 const ProductFormPage: React.FC = () => {
   const navigate = useNavigate();
-  const { id } = useParams();
   const location = useLocation();
+  const { id } = useParams();
   const { user } = useAuth();
   const isEditing = !!id;
-
-  // Componentes pré-selecionados vindos da tela de componentes
-  const preSelectedComponents = location.state?.selectedComponents || [];
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCalculator, setShowCalculator] = useState(false);
-  const [unitsToManufacture, setUnitsToManufacture] = useState(1);
   
   const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
   const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
+  
+  // Estados para cálculo de produção
+  const [productionQuantity, setProductionQuantity] = useState(1);
+  const [productionCalc, setProductionCalc] = useState<ProductionCalculation[]>([]);
+  const [unitsToManufacture, setUnitsToManufacture] = useState(1);
+  const [showProductionReport, setShowProductionReport] = useState(false);
   
   const [formData, setFormData] = useState<ProductCreate>({
     name: '',
@@ -40,31 +70,38 @@ const ProductFormPage: React.FC = () => {
 
   useEffect(() => {
     fetchComponents();
+    
+    // Verificar se vieram componentes pré-selecionados
+    const state = location.state as { selectedComponents?: Component[] };
+    if (state?.selectedComponents) {
+      const preSelected = state.selectedComponents.map(comp => ({
+        componentId: comp.id,
+        quantity: 1
+      }));
+      setFormData(prev => ({ ...prev, components: preSelected }));
+    }
+    
     if (isEditing && id) {
       fetchProduct(Number(id));
-    } else if (preSelectedComponents.length > 0) {
-      // Se tem componentes pré-selecionados, adiciona automaticamente
-      const componentsToAdd = preSelectedComponents.map((comp: Component) => ({
-  componentId: comp.id,
-  quantity: 1
-}));
-      setFormData(prev => ({
-        ...prev,
-        components: componentsToAdd
-      }));
     }
-  }, [id, isEditing]);
+  }, [id, isEditing, location.state]);
 
   useEffect(() => {
     // Filter components based on search
     const filtered = availableComponents.filter(comp =>
       comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       comp.group.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      comp.device?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      comp.value?.toLowerCase().includes(searchTerm.toLowerCase())
+      (comp.device && comp.device.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (comp.value && comp.value.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (comp.package && comp.package.toLowerCase().includes(searchTerm.toLowerCase()))
     );
     setFilteredComponents(filtered);
   }, [searchTerm, availableComponents]);
+
+  useEffect(() => {
+    // Calcular produção sempre que mudar quantidade ou componentes
+    calculateProduction();
+  }, [productionQuantity, formData.components, availableComponents]);
 
   const fetchComponents = async () => {
     try {
@@ -117,15 +154,12 @@ const ProductFormPage: React.FC = () => {
       
       if (isEditing && id) {
         await productsService.update(Number(id), formData);
-        setSuccess('Produto atualizado com sucesso!');
       } else {
         await productsService.create(formData);
-        setSuccess('Produto criado com sucesso!');
       }
       
-      setTimeout(() => {
-        navigate('/products');
-      }, 1500);
+      setSuccess('Produto salvo com sucesso!');
+      setTimeout(() => navigate('/products'), 1500);
     } catch (error) {
       setError('Erro ao salvar produto');
       console.error(error);
@@ -166,46 +200,61 @@ const ProductFormPage: React.FC = () => {
     }));
   };
 
-  const getComponentDetails = (componentId: number) => {
+  const getComponent = (componentId: number): Component | undefined => {
     return availableComponents.find(c => c.id === componentId);
   };
 
-  const calculateProductionReport = () => {
-    const report = formData.components.map(comp => {
-      const component = getComponentDetails(comp.componentId);
+  const calculateProduction = () => {
+    const calculations: ProductionCalculation[] = formData.components.map(comp => {
+      const component = getComponent(comp.componentId);
       if (!component) return null;
 
-      const totalQuantity = comp.quantity * unitsToManufacture;
-      const suggestedPurchase = Math.max(0, totalQuantity - component.quantityInStock);
+      const totalRequired = comp.quantity * productionQuantity;
+      const suggestedPurchase = Math.max(0, totalRequired - component.quantityInStock);
+      const totalPrice = (component.price || 0) * totalRequired;
 
       return {
-        ...component,
+        componentId: component.id,
+        componentName: component.name,
+        device: component.device,
+        value: component.value,
+        package: component.package,
+        characteristics: component.characteristics,
+        internalCode: component.internalCode,
+        drawer: component.drawer,
+        division: component.division,
         quantityPerUnit: comp.quantity,
-        totalQuantityNeeded: totalQuantity,
+        totalRequired,
+        currentStock: component.quantityInStock,
         suggestedPurchase,
-        totalPrice: (component.price || 0) * suggestedPurchase
+        unitPrice: component.price || 0,
+        totalPrice
       };
-    }).filter(Boolean);
+    }).filter(Boolean) as ProductionCalculation[];
 
-    return report;
+    setProductionCalc(calculations);
   };
 
-  const exportProductionReport = async () => {
-    try {
-      const report = calculateProductionReport();
-      const reportData = {
-        productName: formData.name,
-        unitsToManufacture,
-        components: report
-      };
-
-      await exportService.exportProductionReport(reportData);
-      setSuccess('Relatório exportado com sucesso!');
-    } catch (error) {
-      setError('Erro ao exportar relatório');
-      console.error(error);
-    }
+  const getTotalCost = () => {
+    return productionCalc.reduce((sum, calc) => sum + calc.totalPrice, 0);
   };
+
+  const exportProductionReport = () => {
+  try {
+    const report = calculateProduction(); 
+    const reportData = {
+      productName: formData.name,
+      unitsToManufacture: unitsToManufacture,  
+      components: report
+    };
+
+    exportService.exportProductionReport(reportData);
+    setSuccess('Relatório exportado com sucesso!');
+  } catch (error) {
+    setError('Erro ao exportar relatório');
+    console.error(error);
+  }
+};
 
   if (loading) {
     return (
@@ -216,7 +265,7 @@ const ProductFormPage: React.FC = () => {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
         <div className="flex items-center justify-between">
@@ -241,135 +290,154 @@ const ProductFormPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          {/* Botão Calculadora */}
-          {formData.components.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowCalculator(!showCalculator)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-            >
-              <Calculator size={18} />
-              Calcular Produção
-            </button>
-          )}
         </div>
       </div>
 
       {error && <ErrorMessage message={error} onClose={() => setError('')} className="mb-6" />}
       {success && <SuccessMessage message={success} onClose={() => setSuccess('')} className="mb-6" />}
 
-      {/* Calculadora de Produção */}
-      {showCalculator && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Calculadora de Produção</h2>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quantidade de unidades a fabricar
-            </label>
-            <input
-              type="number"
-              value={unitsToManufacture}
-              onChange={(e) => setUnitsToManufacture(Number(e.target.value))}
-              className="w-32 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-              min="1"
-            />
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Componente</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qtd/Unidade</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Necessário</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Em Estoque</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comprar</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Preço Total</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {calculateProductionReport().map((item: any) => (
-                  <tr key={item.id}>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantityPerUnit}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.totalQuantityNeeded}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantityInStock}</td>
-                    <td className="px-4 py-3 text-sm font-medium text-red-600">{item.suggestedPurchase}</td>
-                    <td className="px-4 py-3 text-sm text-gray-900">
-                      R$ {item.totalPrice.toFixed(2).replace('.', ',')}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              onClick={exportProductionReport}
-              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              <FileSpreadsheet size={18} />
-              Exportar Relatório
-            </button>
-          </div>
-        </div>
-      )}
-
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Product Info */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-gray-800 mb-4">Informações do Produto</h2>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome do Produto *
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                  placeholder="Ex: Placa Controladora v2.0"
-                  required
-                />
-              </div>
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">Informações do Produto</h2>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nome do Produto *
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    placeholder="Ex: Placa Controladora v2.0"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Descrição
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                  placeholder="Descrição detalhada do produto"
-                  rows={4}
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Descrição
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    placeholder="Descrição detalhada do produto"
+                    rows={4}
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Criado por
-                </label>
-                <input
-                  type="text"
-                  value={formData.createdBy}
-                  onChange={(e) => setFormData(prev => ({ ...prev, createdBy: e.target.value }))}
-                  className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                  placeholder="Nome do responsável"
-                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Criado por
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.createdBy}
+                    onChange={(e) => setFormData(prev => ({ ...prev, createdBy: e.target.value }))}
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    placeholder="Nome do responsável"
+                  />
+                </div>
               </div>
+            </div>
+
+            {/* Selected Components */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Componentes do Produto ({formData.components.length})
+                </h2>
+                {formData.components.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowProductionReport(!showProductionReport)}
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  >
+                    <Calculator size={16} />
+                    Calcular Produção
+                  </button>
+                )}
+              </div>
+              
+              {formData.components.length === 0 ? (
+                <div className="text-center py-8">
+                  <Cpu className="mx-auto mb-3 text-gray-400" size={40} />
+                  <p className="text-gray-500">Nenhum componente selecionado</p>
+                  <p className="text-sm text-gray-400 mt-1">Adicione componentes da lista ao lado</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {formData.components.map((comp) => {
+                    const component = getComponent(comp.componentId);
+                    if (!component) return null;
+                    
+                    return (
+                      <div
+                        key={comp.componentId}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <Cpu className="text-gray-400" size={18} />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">
+                                {component.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {[component.device, component.value, component.package]
+                                  .filter(Boolean)
+                                  .join(' • ')}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateComponentQuantity(comp.componentId, comp.quantity - 1)}
+                              className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              value={comp.quantity}
+                              onChange={(e) => updateComponentQuantity(comp.componentId, Number(e.target.value))}
+                              className="w-16 text-center px-2 py-1 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                              min="1"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => updateComponentQuantity(comp.componentId, comp.quantity + 1)}
+                              className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeComponent(comp.componentId)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
           {/* Components Selection */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-fit">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Componentes Disponíveis</h2>
             
             {/* Search */}
@@ -400,10 +468,7 @@ const ProductFormPage: React.FC = () => {
                       <div>
                         <p className="text-sm font-medium text-gray-900">{component.name}</p>
                         <p className="text-xs text-gray-500">
-                          {[component.group, component.device, component.value, component.package]
-                            .filter(Boolean)
-                            .join(' • ')} 
-                          • Estoque: {component.quantityInStock}
+                          {component.group} • Estoque: {component.quantityInStock}
                         </p>
                       </div>
                       <Plus size={18} className="text-gray-400" />
@@ -415,78 +480,107 @@ const ProductFormPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Selected Components */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mt-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Componentes do Produto ({formData.components.length})
-          </h2>
-          
-          {formData.components.length === 0 ? (
-            <div className="text-center py-8">
-              <Cpu className="mx-auto mb-3 text-gray-400" size={40} />
-              <p className="text-gray-500">Nenhum componente selecionado</p>
-              <p className="text-sm text-gray-400 mt-1">Adicione componentes da lista acima</p>
+        {/* Production Report */}
+        {showProductionReport && productionCalc.length > 0 && (
+          <div className="mt-6 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Relatório de Produção</h2>
+                <p className="text-sm text-gray-500">Análise de componentes necessários</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Quantidade a produzir:
+                  </label>
+                  <input
+                    type="number"
+                    value={productionQuantity}
+                    onChange={(e) => setProductionQuantity(Math.max(1, Number(e.target.value)))}
+                    className="w-20 px-3 py-1.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                    min="1"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={exportProductionReport}
+                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  <FileSpreadsheet size={18} />
+                  Exportar Excel
+                </button>
+              </div>
             </div>
-          ) : (
-            <div className="space-y-2">
-              {formData.components.map((comp) => {
-                const component = getComponentDetails(comp.componentId);
-                return (
-                  <div
-                    key={comp.componentId}
-                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Cpu className="text-gray-400" size={18} />
-                      <div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {component?.name || `Componente #${comp.componentId}`}
-                        </span>
-                        {component && (
-                          <p className="text-xs text-gray-500">
-                            {[component.device, component.value].filter(Boolean).join(' - ')}
-                          </p>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Componente</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device/Value</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cód. Interno</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Localização</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Qtd/Un</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Estoque</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Comprar</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Preço Unit.</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {productionCalc.map((calc) => (
+                    <tr key={calc.componentId}>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                        {calc.componentName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {[calc.device, calc.value].filter(Boolean).join(' / ') || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {calc.internalCode || '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {calc.drawer && calc.division ? `${calc.drawer}/${calc.division}` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">{calc.quantityPerUnit}</td>
+                      <td className="px-4 py-3 text-sm text-right font-medium">{calc.totalRequired}</td>
+                      <td className="px-4 py-3 text-sm text-right">{calc.currentStock}</td>
+                      <td className={`px-4 py-3 text-sm text-right font-medium ${
+                        calc.suggestedPurchase > 0 ? 'text-red-600' : 'text-green-600'
+                      }`}>
+                        {calc.suggestedPurchase > 0 ? (
+                          <span className="flex items-center justify-end gap-1">
+                            <AlertCircle size={14} />
+                            {calc.suggestedPurchase}
+                          </span>
+                        ) : (
+                          'OK'
                         )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateComponentQuantity(comp.componentId, comp.quantity - 1)}
-                          className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
-                        >
-                          -
-                        </button>
-                        <input
-                          type="number"
-                          value={comp.quantity}
-                          onChange={(e) => updateComponentQuantity(comp.componentId, Number(e.target.value))}
-                          className="w-16 text-center px-2 py-1 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                          min="1"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => updateComponentQuantity(comp.componentId, comp.quantity + 1)}
-                          className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => removeComponent(comp.componentId)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right">
+                        R$ {calc.unitPrice.toFixed(2)}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium">
+                        R$ {calc.totalPrice.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot className="bg-gray-50">
+                  <tr>
+                    <td colSpan={9} className="px-4 py-3 text-sm font-medium text-right">
+                      Total Geral:
+                    </td>
+                    <td className="px-4 py-3 text-sm font-bold text-right">
+                      R$ {getTotalCost().toFixed(2)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Actions */}
         <div className="flex justify-end gap-3 mt-6">

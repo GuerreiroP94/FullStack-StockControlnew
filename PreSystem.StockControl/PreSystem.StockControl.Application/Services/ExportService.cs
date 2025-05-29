@@ -19,6 +19,8 @@ namespace PreSystem.StockControl.Application.Services
         // Exporta componentes para Excel
         public async Task<byte[]> ExportComponentsToExcelAsync(IEnumerable<ComponentDto> components)
         {
+            await Task.CompletedTask; // Resolver warning de async
+
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Componentes");
 
@@ -77,6 +79,8 @@ namespace PreSystem.StockControl.Application.Services
         // Exporta relatório de produção para Excel
         public async Task<byte[]> ExportProductionReportToExcelAsync(ProductionReportDto report)
         {
+            await Task.CompletedTask; // Resolver warning de async
+
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Relatório de Produção");
 
@@ -168,6 +172,8 @@ namespace PreSystem.StockControl.Application.Services
         // Exporta movimentações para Excel
         public async Task<byte[]> ExportMovementsToExcelAsync(IEnumerable<StockMovementDto> movements)
         {
+            await Task.CompletedTask; // Resolver warning de async
+
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Movimentações");
 

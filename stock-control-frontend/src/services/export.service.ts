@@ -200,6 +200,88 @@ class ExportService {
       reader.readAsText(file, 'UTF-8');
     });
   }
+  /**
+ * Exporta relatório de produção para arquivo CSV/Excel
+ * @param reportData Dados do relatório de produção
+ */
+exportProductionReport(reportData: any) {
+  const { productName, unitsToManufacture, components } = reportData;
+  
+  // Cabeçalhos das colunas
+  const headers = [
+    'Código Interno',
+    'Componente',
+    'Device',
+    'Value',
+    'Package',
+    'Características',
+    'Gaveta',
+    'Divisão',
+    'Qtd/Unidade',
+    'Qtd Total',
+    'Em Estoque',
+    'Comprar',
+    'Preço Unit.',
+    'Preço Total'
+  ];
+
+  // Título do relatório
+  const title = `RELATÓRIO DE PRODUÇÃO - ${productName}`;
+  const subtitle = `Unidades a Fabricar: ${unitsToManufacture}`;
+  
+  // Preparar dados para o CSV
+  const rows = components.map((comp: any) => [
+    comp.internalCode || '',
+    comp.name || '',
+    comp.device || '',
+    comp.value || '',
+    comp.package || '',
+    comp.characteristics || '',
+    comp.drawer || '',
+    comp.division || '',
+    comp.quantityPerUnit || 0,
+    comp.totalQuantityNeeded || 0,
+    comp.quantityInStock || 0,
+    comp.suggestedPurchase || 0,
+    comp.price ? `R$ ${comp.price.toFixed(2).replace('.', ',')}` : 'R$ 0,00',
+    `R$ ${comp.totalPrice.toFixed(2).replace('.', ',')}`
+  ]);
+
+  // Calcular total geral
+  const totalGeral = components.reduce((sum: number, comp: any) => sum + (comp.totalPrice || 0), 0);
+  
+  // Adicionar linha de total
+  rows.push([
+    '', '', '', '', '', '', '', '',
+    'TOTAL:', '', '', '',
+    '',
+    `R$ ${totalGeral.toFixed(2).replace('.', ',')}`
+  ]);
+
+  // Criar conteúdo CSV
+  const csvContent = [
+    title,
+    subtitle,
+    '', // linha vazia
+    headers.join(';'),
+    ...rows.map((row: any[]) => row.join(';'))
+  ].join('\n');
+
+  // Criar blob e fazer download
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  const filename = `relatorio_producao_${productName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
 }
 
 export default new ExportService();
