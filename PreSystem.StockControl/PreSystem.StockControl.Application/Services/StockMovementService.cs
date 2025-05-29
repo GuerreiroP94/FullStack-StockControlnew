@@ -146,5 +146,112 @@ namespace PreSystem.StockControl.Application.Services
                 UserName = movement.User?.Name
             };
         }
+
+        // Registra múltiplas movimentações de uma vez (movimentação em massa)
+        public async Task<BulkMovementResultDto> RegisterBulkMovementsAsync(BulkStockMovementDto dto)
+        {
+            var result = new BulkMovementResultDto
+            {
+                TotalMovements = dto.Movements.Count,
+                SuccessCount = 0,
+                ErrorCount = 0,
+                Errors = new List<string>(),
+                AlertsGenerated = new List<int>()
+            };
+
+            try
+            {
+                foreach (var movement in dto.Movements)
+                {
+                    try
+                    {
+                        // Busca o componente para validação
+                        var component = await _componentRepository.GetByIdAsync(movement.ComponentId);
+                        if (component == null)
+                        {
+                            result.Errors.Add($"Componente ID {movement.ComponentId} não encontrado");
+                            result.ErrorCount++;
+                            continue;
+                        }
+
+                        // Valida se há estoque suficiente para saída
+                        if (movement.MovementType == "Saida" && movement.Quantity > component.QuantityInStock)
+                        {
+                            result.Errors.Add($"Estoque insuficiente para o componente {component.Name}. Disponível: {component.QuantityInStock}, Solicitado: {movement.Quantity}");
+                            result.ErrorCount++;
+                            continue;
+                        }
+
+                        // Cria a movimentação
+                        var stockMovement = new StockMovement
+                        {
+                            ComponentId = movement.ComponentId,
+                            MovementType = movement.MovementType,
+                            QuantityChanged = movement.Quantity,
+                            PerformedAt = DateTime.UtcNow,
+                            PerformedBy = _userContextService.GetCurrentUsername() ?? "Sistema",
+                            UserId = _userContextService.GetCurrentUserId()
+                        };
+
+                        await _movementRepository.AddAsync(stockMovement);
+
+                        // Atualiza o estoque do componente
+                        if (movement.MovementType == "Entrada")
+                        {
+                            component.QuantityInStock += movement.Quantity;
+                            component.LastEntryDate = DateTime.UtcNow;
+                            component.LastEntryQuantity = movement.Quantity;
+                        }
+                        else if (movement.MovementType == "Saida")
+                        {
+                            component.QuantityInStock -= movement.Quantity;
+                            component.LastExitQuantity = movement.Quantity;
+                        }
+
+                        component.UpdatedAt = DateTime.UtcNow;
+                        await _componentRepository.UpdateAsync(component);
+
+                        // Verifica se precisa gerar alerta
+                        if (component.QuantityInStock <= component.MinimumQuantity)
+                        {
+                            var alert = new StockAlert
+                            {
+                                ComponentId = component.Id,
+                                Message = component.QuantityInStock == 0
+                                    ? $"CRÍTICO: {component.Name} está com estoque zerado!"
+                                    : $"Estoque baixo: {component.Name} está com apenas {component.QuantityInStock} unidades (mínimo: {component.MinimumQuantity})",
+                                CreatedAt = DateTime.UtcNow
+                            };
+
+                            await _alertRepository.AddAsync(alert);
+                            result.AlertsGenerated.Add(alert.Id);
+                        }
+
+                        result.SuccessCount++;
+
+                        _logger.LogInformation(
+                            "Movimentação em massa registrada: {Tipo} de {Quantidade} unidades do componente {ComponenteId}",
+                            movement.MovementType, movement.Quantity, movement.ComponentId
+                        );
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Erro ao processar movimentação do componente {ComponentId}", movement.ComponentId);
+                        result.Errors.Add($"Erro ao processar componente {movement.ComponentId}: {ex.Message}");
+                        result.ErrorCount++;
+                    }
+                }
+
+                result.Success = result.ErrorCount == 0;
+                return result;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Erro geral ao processar movimentações em massa");
+                result.Success = false;
+                result.Errors.Add($"Erro geral: {ex.Message}");
+                return result;
+            }
+        }
     }
 }

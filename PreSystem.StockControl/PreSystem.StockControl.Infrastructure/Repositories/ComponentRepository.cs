@@ -47,5 +47,19 @@ namespace PreSystem.StockControl.Infrastructure.Repositories
             _context.Components.Remove(component);
             await _context.SaveChangesAsync();
         }
+
+        // Adiciona múltiplos componentes de uma vez (usado na importação em massa)
+        public async Task AddRangeAsync(IEnumerable<Component> components)
+        {
+            await _context.Components.AddRangeAsync(components);
+            await _context.SaveChangesAsync();
+        }
+
+        // Remove múltiplos componentes de uma vez (usado na exclusão em massa)
+        public async Task DeleteRangeAsync(IEnumerable<Component> components)
+        {
+            _context.Components.RemoveRange(components);
+            await _context.SaveChangesAsync();
+        }
     }
 }
