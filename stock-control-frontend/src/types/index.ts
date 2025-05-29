@@ -133,6 +133,10 @@ export interface StockAlert {
 export interface ComponentFilter {
   name?: string;
   group?: string;
+  device?: string;
+  package?: string;
+  value?: string;
+  searchTerm?: string;
   pageNumber: number;
   pageSize: number;
 }

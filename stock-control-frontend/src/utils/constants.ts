@@ -9,6 +9,7 @@ export const ROUTES = {
   MOVEMENTS: '/movements',
   ALERTS: '/alerts',
   USERS: '/users',
+  SETTINGS: '/settings',
 };
 
 export const COMPONENT_GROUPS = [
