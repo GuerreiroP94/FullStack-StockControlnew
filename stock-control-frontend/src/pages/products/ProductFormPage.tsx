@@ -239,13 +239,28 @@ const ProductFormPage: React.FC = () => {
     return productionCalc.reduce((sum, calc) => sum + calc.totalPrice, 0);
   };
 
-  const exportProductionReport = () => {
+ const exportProductionReport = () => {
   try {
-    const report = calculateProduction(); 
+    // Usar productionCalc que já está calculado
     const reportData = {
       productName: formData.name,
-      unitsToManufacture: unitsToManufacture,  
-      components: report
+      unitsToManufacture: productionQuantity, // Usar productionQuantity ao invés de unitsToManufacture
+      components: productionCalc.map(calc => ({
+        componentName: calc.componentName,
+        device: calc.device,
+        value: calc.value,
+        package: calc.package,
+        characteristics: calc.characteristics,
+        internalCode: calc.internalCode,
+        drawer: calc.drawer,
+        division: calc.division,
+        quantityPerUnit: calc.quantityPerUnit,
+        totalQuantityNeeded: calc.totalRequired,
+        quantityInStock: calc.currentStock,
+        suggestedPurchase: calc.suggestedPurchase,
+        unitPrice: calc.unitPrice,
+        totalPrice: calc.totalPrice
+      }))
     };
 
     exportService.exportProductionReport(reportData);

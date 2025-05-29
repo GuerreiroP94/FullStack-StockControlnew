@@ -26,6 +26,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
+import movementsService from '../../services/movements.service';
 
 const ComponentsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -162,24 +163,44 @@ if (uniqueValues.length > 0) {
   };
 
   const handleSaveChanges = async () => {
-    try {
-      // Aqui você implementaria a lógica para salvar as alterações
-      // incluindo as movimentações de estoque
-      
-      setSuccess('Alterações salvas com sucesso!');
-      setIsEditMode(false);
-      setStockEntries(new Map());
-      fetchComponents();
-    } catch (error) {
-      setError('Erro ao salvar alterações');
+  try {
+    const movements: any[] = [];
+    
+    stockEntries.forEach((entry, componentId) => {
+      if (entry.entryQuantity !== undefined && entry.entryQuantity > 0) {
+        movements.push({
+          componentId,
+          movementType: 'Entrada',
+          quantity: entry.entryQuantity
+        });
+      }
+      if (entry.exitQuantity !== undefined && entry.exitQuantity > 0) {
+        movements.push({
+          componentId,
+          movementType: 'Saida',
+          quantity: entry.exitQuantity
+        });
+      }
+    });
+    
+    if (movements.length > 0) {
+      await movementsService.createBulk({ movements });
     }
-  };
+    
+    setSuccess('Alterações salvas com sucesso!');
+    setIsEditMode(false);
+    setStockEntries(new Map());
+    fetchComponents();
+  } catch (error) {
+    setError('Erro ao salvar alterações');
+  }
+};
 
   const handleDelete = async () => {
     try {
       // Implementar lógica de exclusão múltipla
       const selectedIds = Array.from(selectedComponents);
-      // await componentsService.deleteMultiple(selectedIds);
+       await componentsService.deleteMultiple(selectedIds);
       
       setSuccess('Componentes excluídos com sucesso!');
       setSelectedComponents(new Set());
@@ -238,28 +259,25 @@ if (uniqueValues.length > 0) {
   };
 
   const handleImportFile = async () => {
-    if (!importFile) {
-      setError('Selecione um arquivo para importar');
-      return;
-    }
+  if (!importFile) {
+    setError('Selecione um arquivo para importar');
+    return;
+  }
 
-    try {
-      setImporting(true);
-      const componentsData = await exportService.processImportFile(importFile);
-      
-      // Aqui você faria a chamada para a API para salvar os componentes
-      // await componentsService.bulkCreate(componentsData);
-      
-      setSuccess(`${componentsData.length} componentes importados com sucesso!`);
-      setShowImportModal(false);
-      setImportFile(null);
-      fetchComponents();
-    } catch (error: any) {
-      setError(`Erro ao importar arquivo: ${error.message}`);
-    } finally {
-      setImporting(false);
-    }
-  };
+  try {
+    setImporting(true);
+    const result = await componentsService.bulkImport(importFile);
+    
+    setSuccess(`Importação concluída: ${result.successCount} importados, ${result.errorCount} erros`);
+    setShowImportModal(false);
+    setImportFile(null);
+    fetchComponents();
+  } catch (error: any) {
+    setError(`Erro ao importar arquivo: ${error.message}`);
+  } finally {
+    setImporting(false);
+  }
+};
 
   const handleDownloadTemplate = () => {
     exportService.downloadImportTemplate();
