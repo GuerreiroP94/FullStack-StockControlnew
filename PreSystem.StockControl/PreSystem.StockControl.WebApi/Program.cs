@@ -23,6 +23,7 @@ builder.Services.AddHttpContextAccessor(); // Permite acessar o contexto HTTP at
 builder.Services.AddScoped<IUserContextService, UserContextService>(); // Injeta o serviço que fornece dados do usuário logado a partir do token JWT
 builder.Services.AddScoped<IUserRepository, UserRepository>(); // Injeta o repositório de usuários
 builder.Services.AddScoped<IUserService, UserService>(); // Injeta o serviço de usuários
+builder.Services.AddScoped<IExportService, ExportService>(); // Injeta o serviço de exportação para gerar relatórios Excel
 
 
 // Configuração do CORS para permitir requisições do frontend

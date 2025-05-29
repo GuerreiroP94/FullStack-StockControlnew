@@ -97,13 +97,17 @@ const ComponentsListPage: React.FC = () => {
       setComponents(data);
       
       // Extrair valores únicos para os dropdowns
-      const uniqueDevices = [...new Set(data.map(c => c.device).filter(Boolean))];
-      const uniquePackages = [...new Set(data.map(c => c.package).filter(Boolean))];
-      const uniqueValues = [...new Set(data.map(c => c.value).filter(Boolean))];
-      
-      setDevices(uniqueDevices as string[]);
-      setPackages(uniquePackages as string[]);
-      setValues(uniqueValues as string[]);
+      const uniqueGroups = Array.from(new Set(data.map(c => c.group).filter(Boolean)));
+      const uniqueDevices = Array.from(new Set(data.map(c => c.device).filter(Boolean)));
+      const uniquePackages = Array.from(new Set(data.map(c => c.package).filter(Boolean)));
+      const uniqueValues = Array.from(new Set(data.map(c => c.value).filter(Boolean)));
+
+      setFilterOptions({
+        groups: uniqueGroups as string[],
+        devices: uniqueDevices as string[],
+        packages: uniquePackages as string[],
+        values: uniqueValues as string[]
+      });
     } catch (error) {
       setError('Erro ao carregar componentes');
       console.error(error);

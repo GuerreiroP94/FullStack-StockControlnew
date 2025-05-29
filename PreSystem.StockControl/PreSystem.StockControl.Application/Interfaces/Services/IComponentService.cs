@@ -20,5 +20,8 @@ namespace PreSystem.StockControl.Application.Interfaces.Services
 
         // Remove um componente com base no ID
         Task<bool> DeleteComponentAsync(int id);
+
+        Task<ImportResultDto> ImportComponentsAsync(Stream csvStream);
+        Task<bool> DeleteMultipleComponentsAsync(List<int> componentIds);
     }
 }

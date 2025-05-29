@@ -14,5 +14,7 @@ namespace PreSystem.StockControl.Application.Interfaces.Services
 
         // Retorna uma movimentação por ID
         Task<StockMovementDto?> GetMovementByIdAsync(int componentId);
+
+        Task<BulkMovementResultDto> RegisterBulkMovementsAsync(BulkStockMovementDto dto);
     }
 }

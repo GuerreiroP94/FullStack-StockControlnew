@@ -4,6 +4,7 @@ namespace PreSystem.StockControl.Domain.Interfaces.Repositories
 {
     public interface IComponentRepository : IRepository<Component>
     {
-        // Podemos adicionar métodos específicos aqui depois se precisar
+        Task AddRangeAsync(IEnumerable<Component> components);
+        Task DeleteRangeAsync(IEnumerable<Component> components);
     }
 }

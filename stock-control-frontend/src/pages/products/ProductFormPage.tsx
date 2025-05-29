@@ -1,23 +1,32 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Save, Package, Plus, Trash2, Search, Cpu } from 'lucide-react';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { ArrowLeft, Save, Package, Plus, Trash2, Search, Cpu, Calculator, FileSpreadsheet } from 'lucide-react';
 import productsService from '../../services/products.service';
 import componentsService from '../../services/components.service';
+import exportService from '../../services/export.service';
 import { ProductCreate, Component, ProductComponentCreate } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
+import SuccessMessage from '../../components/common/SuccessMessage';
 
 const ProductFormPage: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const location = useLocation();
   const { user } = useAuth();
   const isEditing = !!id;
+
+  // Componentes pré-selecionados vindos da tela de componentes
+  const preSelectedComponents = location.state?.selectedComponents || [];
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [unitsToManufacture, setUnitsToManufacture] = useState(1);
   
   const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
   const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
@@ -33,6 +42,16 @@ const ProductFormPage: React.FC = () => {
     fetchComponents();
     if (isEditing && id) {
       fetchProduct(Number(id));
+    } else if (preSelectedComponents.length > 0) {
+      // Se tem componentes pré-selecionados, adiciona automaticamente
+      const componentsToAdd = preSelectedComponents.map((comp: Component) => ({
+  componentId: comp.id,
+  quantity: 1
+}));
+      setFormData(prev => ({
+        ...prev,
+        components: componentsToAdd
+      }));
     }
   }, [id, isEditing]);
 
@@ -40,7 +59,9 @@ const ProductFormPage: React.FC = () => {
     // Filter components based on search
     const filtered = availableComponents.filter(comp =>
       comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      comp.group.toLowerCase().includes(searchTerm.toLowerCase())
+      comp.group.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      comp.device?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      comp.value?.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredComponents(filtered);
   }, [searchTerm, availableComponents]);
@@ -96,11 +117,15 @@ const ProductFormPage: React.FC = () => {
       
       if (isEditing && id) {
         await productsService.update(Number(id), formData);
+        setSuccess('Produto atualizado com sucesso!');
       } else {
         await productsService.create(formData);
+        setSuccess('Produto criado com sucesso!');
       }
       
-      navigate('/products');
+      setTimeout(() => {
+        navigate('/products');
+      }, 1500);
     } catch (error) {
       setError('Erro ao salvar produto');
       console.error(error);
@@ -141,9 +166,45 @@ const ProductFormPage: React.FC = () => {
     }));
   };
 
-  const getComponentName = (componentId: number) => {
-    const component = availableComponents.find(c => c.id === componentId);
-    return component?.name || `Componente #${componentId}`;
+  const getComponentDetails = (componentId: number) => {
+    return availableComponents.find(c => c.id === componentId);
+  };
+
+  const calculateProductionReport = () => {
+    const report = formData.components.map(comp => {
+      const component = getComponentDetails(comp.componentId);
+      if (!component) return null;
+
+      const totalQuantity = comp.quantity * unitsToManufacture;
+      const suggestedPurchase = Math.max(0, totalQuantity - component.quantityInStock);
+
+      return {
+        ...component,
+        quantityPerUnit: comp.quantity,
+        totalQuantityNeeded: totalQuantity,
+        suggestedPurchase,
+        totalPrice: (component.price || 0) * suggestedPurchase
+      };
+    }).filter(Boolean);
+
+    return report;
+  };
+
+  const exportProductionReport = async () => {
+    try {
+      const report = calculateProductionReport();
+      const reportData = {
+        productName: formData.name,
+        unitsToManufacture,
+        components: report
+      };
+
+      await exportService.exportProductionReport(reportData);
+      setSuccess('Relatório exportado com sucesso!');
+    } catch (error) {
+      setError('Erro ao exportar relatório');
+      console.error(error);
+    }
   };
 
   if (loading) {
@@ -180,10 +241,83 @@ const ProductFormPage: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Botão Calculadora */}
+          {formData.components.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowCalculator(!showCalculator)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              <Calculator size={18} />
+              Calcular Produção
+            </button>
+          )}
         </div>
       </div>
 
       {error && <ErrorMessage message={error} onClose={() => setError('')} className="mb-6" />}
+      {success && <SuccessMessage message={success} onClose={() => setSuccess('')} className="mb-6" />}
+
+      {/* Calculadora de Produção */}
+      {showCalculator && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4">Calculadora de Produção</h2>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantidade de unidades a fabricar
+            </label>
+            <input
+              type="number"
+              value={unitsToManufacture}
+              onChange={(e) => setUnitsToManufacture(Number(e.target.value))}
+              className="w-32 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              min="1"
+            />
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Componente</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qtd/Unidade</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Necessário</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Em Estoque</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Comprar</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Preço Total</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {calculateProductionReport().map((item: any) => (
+                  <tr key={item.id}>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.name}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantityPerUnit}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.totalQuantityNeeded}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{item.quantityInStock}</td>
+                    <td className="px-4 py-3 text-sm font-medium text-red-600">{item.suggestedPurchase}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      R$ {item.totalPrice.toFixed(2).replace('.', ',')}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              onClick={exportProductionReport}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <FileSpreadsheet size={18} />
+              Exportar Relatório
+            </button>
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -265,7 +399,12 @@ const ProductFormPage: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-gray-900">{component.name}</p>
-                        <p className="text-xs text-gray-500">{component.group} • Estoque: {component.quantityInStock}</p>
+                        <p className="text-xs text-gray-500">
+                          {[component.group, component.device, component.value, component.package]
+                            .filter(Boolean)
+                            .join(' • ')} 
+                          • Estoque: {component.quantityInStock}
+                        </p>
                       </div>
                       <Plus size={18} className="text-gray-400" />
                     </div>
@@ -290,51 +429,61 @@ const ProductFormPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              {formData.components.map((comp) => (
-                <div
-                  key={comp.componentId}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <Cpu className="text-gray-400" size={18} />
-                    <span className="text-sm font-medium text-gray-900">
-                      {getComponentName(comp.componentId)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
+              {formData.components.map((comp) => {
+                const component = getComponentDetails(comp.componentId);
+                return (
+                  <div
+                    key={comp.componentId}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Cpu className="text-gray-400" size={18} />
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">
+                          {component?.name || `Componente #${comp.componentId}`}
+                        </span>
+                        {component && (
+                          <p className="text-xs text-gray-500">
+                            {[component.device, component.value].filter(Boolean).join(' - ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateComponentQuantity(comp.componentId, comp.quantity - 1)}
+                          className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          value={comp.quantity}
+                          onChange={(e) => updateComponentQuantity(comp.componentId, Number(e.target.value))}
+                          className="w-16 text-center px-2 py-1 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          min="1"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => updateComponentQuantity(comp.componentId, comp.quantity + 1)}
+                          className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                        >
+                          +
+                        </button>
+                      </div>
                       <button
                         type="button"
-                        onClick={() => updateComponentQuantity(comp.componentId, comp.quantity - 1)}
-                        className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
+                        onClick={() => removeComponent(comp.componentId)}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                       >
-                        -
-                      </button>
-                      <input
-                        type="number"
-                        value={comp.quantity}
-                        onChange={(e) => updateComponentQuantity(comp.componentId, Number(e.target.value))}
-                        className="w-16 text-center px-2 py-1 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        min="1"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => updateComponentQuantity(comp.componentId, comp.quantity + 1)}
-                        className="w-8 h-8 rounded-lg border border-gray-300 hover:bg-gray-100 flex items-center justify-center"
-                      >
-                        +
+                        <Trash2 size={18} />
                       </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => removeComponent(comp.componentId)}
-                      className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
