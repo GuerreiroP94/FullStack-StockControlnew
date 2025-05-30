@@ -17,7 +17,7 @@ class AuthService {
     
     // 4. Parse user info from token
     const decoded = parseJwt(token);
-    const userId = decoded?.UserId || decoded?.userId || decoded?.sub;
+    const userId = decoded?.UserId || decoded?.userId || decoded?.nameid || decoded?.sub;
     
     if (!userId) {
       throw new Error('ID do usuário não encontrado no token');

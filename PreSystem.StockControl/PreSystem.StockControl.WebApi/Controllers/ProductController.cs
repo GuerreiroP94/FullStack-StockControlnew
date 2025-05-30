@@ -7,7 +7,6 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace PreSystem.StockControl.WebApi.Controllers
 {
-    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     [Authorize] // Essa linha garante que só acessa quem tiver JWT válido

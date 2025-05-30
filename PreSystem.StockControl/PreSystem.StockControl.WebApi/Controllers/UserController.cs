@@ -1,10 +1,8 @@
-﻿// PreSystem.StockControl.WebApi/Controllers/UserController.cs
-
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using PreSystem.StockControl.Application.DTOs;
 using PreSystem.StockControl.Application.Interfaces.Services;
-using PreSystem.StockControl.Application.Services;
+using System.Security.Claims;
 
 namespace PreSystem.StockControl.WebApi.Controllers
 {
@@ -15,12 +13,13 @@ namespace PreSystem.StockControl.WebApi.Controllers
         private readonly IUserService _userService;
         private readonly IUserContextService _userContextService;
 
-        public UserController(IUserService userService, IUserContextService userContextService) // ADICIONE O PARÂMETRO
+        public UserController(IUserService userService, IUserContextService userContextService)
         {
             _userService = userService;
-            _userContextService = userContextService; // ADICIONE ESTA ATRIBUIÇÃO
+            _userContextService = userContextService;
         }
 
+        // GET: api/user - Listar todos (apenas admin)
         [Authorize(Roles = "admin")]
         [HttpGet]
         public async Task<IActionResult> GetAllUsers()
@@ -29,15 +28,40 @@ namespace PreSystem.StockControl.WebApi.Controllers
             return Ok(users);
         }
 
-        [Authorize(Roles = "admin")]
+        // GET: api/user/me - Dados do usuário atual
+        [Authorize]
+        [HttpGet("me")]
+        public async Task<IActionResult> GetCurrentUser()
+        {
+            var userId = _userContextService.GetCurrentUserId();
+            if (userId == null) return Unauthorized();
+
+            var user = await _userService.GetUserByIdAsync(userId.Value);
+            if (user == null) return NotFound();
+
+            return Ok(user);
+        }
+
+        // GET: api/user/{id} - Buscar por ID (usuário pode ver seus próprios dados)
+        [Authorize]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetUserById(int id)
         {
+            var currentUserId = _userContextService.GetCurrentUserId();
+            var currentUserRole = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
+
+            // Se não for admin, só pode ver seus próprios dados
+            if (currentUserRole != "admin" && currentUserId != id)
+            {
+                return Forbid("Você só pode acessar seus próprios dados.");
+            }
+
             var user = await _userService.GetUserByIdAsync(id);
             if (user == null) return NotFound();
             return Ok(user);
         }
 
+        // POST: api/user - Criar usuário (apenas admin)
         [Authorize(Roles = "admin")]
         [HttpPost]
         public async Task<IActionResult> CreateUser([FromBody] UserCreateDto dto)
@@ -47,6 +71,7 @@ namespace PreSystem.StockControl.WebApi.Controllers
             return CreatedAtAction(nameof(GetUserById), new { id = createdUser.Id }, createdUser);
         }
 
+        // PUT: api/user/{id}/role - Atualizar role (apenas admin)
         [Authorize(Roles = "admin")]
         [HttpPut("{id:int}/role")]
         public async Task<IActionResult> UpdateUserRole(int id, [FromBody] string newRole)
@@ -56,6 +81,7 @@ namespace PreSystem.StockControl.WebApi.Controllers
             return NoContent();
         }
 
+        // PUT: api/user/{id} - Atualizar usuário (apenas admin)
         [Authorize(Roles = "admin")]
         [HttpPut("{id:int}")]
         public async Task<IActionResult> UpdateUserByAdmin(int id, [FromBody] UserUpdateDto dto)
@@ -65,30 +91,7 @@ namespace PreSystem.StockControl.WebApi.Controllers
             return NoContent();
         }
 
-        /// <summary>
-        /// Valida a senha atual do usuário autenticado
-        /// </summary>
-        /// <remarks>
-        /// Este endpoint é usado para verificar se a senha fornecida corresponde à senha atual do usuário.
-        /// É útil em cenários onde o usuário precisa confirmar sua identidade antes de realizar ações sensíveis,
-        /// como alterar a própria senha ou dados críticos do perfil.
-        /// 
-        /// Exemplo de requisição:
-        /// 
-        ///     POST /api/user/1/validate-password
-        ///     {
-        ///         "password": "minhasenhaatual123"
-        ///     }
-        /// 
-        /// </remarks>
-        /// <param name="id">ID do usuário (deve ser o mesmo do usuário autenticado)</param>
-        /// <param name="dto">Objeto contendo a senha a ser validada</param>
-        /// <returns>Retorna um objeto indicando se a senha é válida</returns>
-        /// <response code="200">Senha validada com sucesso. Retorna { "isValid": true/false }</response>
-        /// <response code="400">Dados inválidos na requisição</response>
-        /// <response code="401">Usuário não autenticado</response>
-        /// <response code="403">Usuário tentando validar senha de outro usuário</response>
-        /// <response code="500">Erro interno do servidor</response>
+        // POST: api/user/{id}/validate-password - Validar senha do usuário
         [Authorize]
         [HttpPost("{id:int}/validate-password")]
         [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
@@ -100,32 +103,25 @@ namespace PreSystem.StockControl.WebApi.Controllers
         {
             try
             {
-                // Obtém o ID do usuário atual através do contexto (JWT)
                 var currentUserId = _userContextService.GetCurrentUserId();
 
-                // Verifica se conseguiu obter o ID do usuário
                 if (currentUserId == null)
                 {
                     return Unauthorized(new { error = "Usuário não autenticado" });
                 }
 
-                // Verifica se o usuário está tentando validar sua própria senha
                 if (currentUserId != id)
                 {
-                    // CORREÇÃO: Usar StatusCode 403 ao invés de Forbid()
                     return StatusCode(403, new { error = "Você não tem permissão para validar a senha de outro usuário." });
                 }
 
-                // Valida o modelo
                 if (!ModelState.IsValid)
                 {
                     return BadRequest(ModelState);
                 }
 
-                // Chama o serviço para realizar a validação
                 var isValid = await _userService.ValidatePasswordAsync(id, dto.Password);
 
-                // Retorna o resultado em formato JSON
                 return Ok(new
                 {
                     isValid = isValid,

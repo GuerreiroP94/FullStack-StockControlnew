@@ -12,8 +12,8 @@ using PreSystem.StockControl.Infrastructure.Persistence;
 namespace PreSystem.StockControl.Infrastructure.Migrations
 {
     [DbContext(typeof(StockControlDbContext))]
-    [Migration("20250529153701_AddNewComponentFields")]
-    partial class AddNewComponentFields
+    [Migration("20250529213943_SyncDatabaseModel")]
+    partial class SyncDatabaseModel
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,28 +33,71 @@ namespace PreSystem.StockControl.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Characteristics")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Device")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Division")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Drawer")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Environment")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Group")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("InternalCode")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("LastEntryDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("LastEntryQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("LastExitQuantity")
+                        .HasColumnType("int");
+
                     b.Property<int>("MinimumQuantity")
                         .HasColumnType("int");
+
+                    b.Property<string>("NCM")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NVE")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Package")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("Price")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int>("QuantityInStock")
                         .HasColumnType("int");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
