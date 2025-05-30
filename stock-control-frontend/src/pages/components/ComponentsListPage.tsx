@@ -15,7 +15,9 @@ import {
   CheckSquare,
   Square,
   ShoppingBag,
-  Upload
+  Upload,
+  Check,
+  Settings
 } from 'lucide-react';
 import componentsService from '../../services/components.service';
 import exportService from '../../services/export.service';
@@ -40,11 +42,16 @@ const ComponentsListPage: React.FC = () => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedComponents, setSelectedComponents] = useState<Set<number>>(new Set());
   const [stockEntries, setStockEntries] = useState<Map<number, ComponentStockEntry>>(new Map());
+  const [editingRow, setEditingRow] = useState<number | null>(null);
+  const [editedComponent, setEditedComponent] = useState<Component | null>(null);
   
   // Estado de importação
   const [showImportModal, setShowImportModal] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
+  
+  // Estado para abas
+  const [activeTab, setActiveTab] = useState<'components' | 'groups'>('components');
   
   // Dropdowns de grupos
   const [groups, setGroups] = useState<string[]>(COMPONENT_GROUPS);
@@ -52,13 +59,8 @@ const ComponentsListPage: React.FC = () => {
   const [packages, setPackages] = useState<string[]>([]);
   const [values, setValues] = useState<string[]>([]);
   
-  // Modais para novos itens
-  const [showNewGroup, setShowNewGroup] = useState(false);
-  const [showNewDevice, setShowNewDevice] = useState(false);
-  const [showNewPackage, setShowNewPackage] = useState(false);
-  const [showNewValue, setShowNewValue] = useState(false);
-  
-  // Valores dos novos itens
+  // Estados para manutenção de grupos
+  const [selectedGroupMaintenance, setSelectedGroupMaintenance] = useState('');
   const [newGroupName, setNewGroupName] = useState('');
   const [newDeviceName, setNewDeviceName] = useState('');
   const [newPackageName, setNewPackageName] = useState('');
@@ -104,19 +106,18 @@ const ComponentsListPage: React.FC = () => {
       const uniqueValues = Array.from(new Set(data.map(c => c.value).filter(Boolean)));
 
       // Atualizar os dropdowns com valores únicos, mantendo os valores padrão
-if (uniqueGroups.length > 0) {
-  setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
-}
-if (uniqueDevices.length > 0) {
-  setDevices(uniqueDevices as string[]);
-}
-if (uniquePackages.length > 0) {
-  setPackages(uniquePackages as string[]);
-}
-if (uniqueValues.length > 0) {
-  setValues(uniqueValues as string[]);
-}
-
+      if (uniqueGroups.length > 0) {
+        setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
+      }
+      if (uniqueDevices.length > 0) {
+        setDevices(uniqueDevices as string[]);
+      }
+      if (uniquePackages.length > 0) {
+        setPackages(uniquePackages as string[]);
+      }
+      if (uniqueValues.length > 0) {
+        setValues(uniqueValues as string[]);
+      }
     } catch (error) {
       setError('Erro ao carregar componentes');
       console.error(error);
@@ -162,45 +163,111 @@ if (uniqueValues.length > 0) {
     setStockEntries(newEntries);
   };
 
-  const handleSaveChanges = async () => {
-  try {
-    const movements: any[] = [];
-    
-    stockEntries.forEach((entry, componentId) => {
-      if (entry.entryQuantity !== undefined && entry.entryQuantity > 0) {
-        movements.push({
-          componentId,
-          movementType: 'Entrada',
-          quantity: entry.entryQuantity
-        });
+  const handleEditRow = (component: Component) => {
+    setEditingRow(component.id);
+    setEditedComponent({ ...component });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingRow(null);
+    setEditedComponent(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editedComponent) return;
+
+    try {
+      // Validações
+      if (!editedComponent.group || !editedComponent.device || !editedComponent.value || !editedComponent.package) {
+        setError('Grupo, Device, Value e Package são obrigatórios');
+        return;
       }
-      if (entry.exitQuantity !== undefined && entry.exitQuantity > 0) {
-        movements.push({
-          componentId,
-          movementType: 'Saida',
-          quantity: entry.exitQuantity
-        });
+
+      // Se houver entrada ou saída, criar movimentações
+      const movements: any[] = [];
+      const stockEntry = stockEntries.get(editedComponent.id);
+      
+      if (stockEntry) {
+        if (stockEntry.entryQuantity && stockEntry.entryQuantity > 0) {
+          movements.push({
+            componentId: editedComponent.id,
+            movementType: 'Entrada',
+            quantity: stockEntry.entryQuantity
+          });
+          editedComponent.quantityInStock += stockEntry.entryQuantity;
+        }
+        
+        if (stockEntry.exitQuantity && stockEntry.exitQuantity > 0) {
+          if (stockEntry.exitQuantity > editedComponent.quantityInStock) {
+            setError('Quantidade de saída maior que o estoque disponível');
+            return;
+          }
+          movements.push({
+            componentId: editedComponent.id,
+            movementType: 'Saida',
+            quantity: stockEntry.exitQuantity
+          });
+          editedComponent.quantityInStock -= stockEntry.exitQuantity;
+        }
       }
-    });
-    
-    if (movements.length > 0) {
-      await movementsService.createBulk({ movements });
+
+      // Atualizar componente
+      await componentsService.update(editedComponent.id, editedComponent);
+
+      // Criar movimentações se houver
+      if (movements.length > 0) {
+        await movementsService.createBulk({ movements });
+      }
+
+      setSuccess('Componente atualizado com sucesso!');
+      setEditingRow(null);
+      setEditedComponent(null);
+      setStockEntries(new Map());
+      fetchComponents();
+    } catch (error) {
+      setError('Erro ao atualizar componente');
+      console.error(error);
     }
-    
-    setSuccess('Alterações salvas com sucesso!');
-    setIsEditMode(false);
-    setStockEntries(new Map());
-    fetchComponents();
-  } catch (error) {
-    setError('Erro ao salvar alterações');
-  }
-};
+  };
+
+  const handleSaveChanges = async () => {
+    try {
+      const movements: any[] = [];
+      
+      stockEntries.forEach((entry, componentId) => {
+        if (entry.entryQuantity !== undefined && entry.entryQuantity > 0) {
+          movements.push({
+            componentId,
+            movementType: 'Entrada',
+            quantity: entry.entryQuantity
+          });
+        }
+        if (entry.exitQuantity !== undefined && entry.exitQuantity > 0) {
+          movements.push({
+            componentId,
+            movementType: 'Saida',
+            quantity: entry.exitQuantity
+          });
+        }
+      });
+      
+      if (movements.length > 0) {
+        await movementsService.createBulk({ movements });
+      }
+      
+      setSuccess('Alterações salvas com sucesso!');
+      setIsEditMode(false);
+      setStockEntries(new Map());
+      fetchComponents();
+    } catch (error) {
+      setError('Erro ao salvar alterações');
+    }
+  };
 
   const handleDelete = async () => {
     try {
-      // Implementar lógica de exclusão múltipla
       const selectedIds = Array.from(selectedComponents);
-       await componentsService.deleteMultiple(selectedIds);
+      await componentsService.deleteMultiple(selectedIds);
       
       setSuccess('Componentes excluídos com sucesso!');
       setSelectedComponents(new Set());
@@ -226,11 +293,36 @@ if (uniqueValues.length > 0) {
     navigate('/products/new', { state: { selectedComponents: selectedData } });
   };
 
+  const handleImportFile = async () => {
+    if (!importFile) {
+      setError('Selecione um arquivo para importar');
+      return;
+    }
+
+    try {
+      setImporting(true);
+      const result = await componentsService.bulkImport(importFile);
+      
+      setSuccess(`Importação concluída: ${result.successCount} importados, ${result.errorCount} erros`);
+      setShowImportModal(false);
+      setImportFile(null);
+      fetchComponents();
+    } catch (error: any) {
+      setError(`Erro ao importar arquivo: ${error.message}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = () => {
+    exportService.downloadImportTemplate();
+  };
+
   const handleAddNewGroup = () => {
     if (newGroupName && !groups.includes(newGroupName)) {
       setGroups([...groups, newGroupName]);
       setNewGroupName('');
-      setShowNewGroup(false);
+      setSuccess('Grupo adicionado com sucesso!');
     }
   };
 
@@ -238,7 +330,7 @@ if (uniqueValues.length > 0) {
     if (newDeviceName && !devices.includes(newDeviceName)) {
       setDevices([...devices, newDeviceName]);
       setNewDeviceName('');
-      setShowNewDevice(false);
+      setSuccess('Device adicionado com sucesso!');
     }
   };
 
@@ -246,7 +338,7 @@ if (uniqueValues.length > 0) {
     if (newPackageName && !packages.includes(newPackageName)) {
       setPackages([...packages, newPackageName]);
       setNewPackageName('');
-      setShowNewPackage(false);
+      setSuccess('Package adicionado com sucesso!');
     }
   };
 
@@ -254,34 +346,13 @@ if (uniqueValues.length > 0) {
     if (newValueName && !values.includes(newValueName)) {
       setValues([...values, newValueName]);
       setNewValueName('');
-      setShowNewValue(false);
+      setSuccess('Value adicionado com sucesso!');
     }
   };
 
-  const handleImportFile = async () => {
-  if (!importFile) {
-    setError('Selecione um arquivo para importar');
-    return;
-  }
-
-  try {
-    setImporting(true);
-    const result = await componentsService.bulkImport(importFile);
-    
-    setSuccess(`Importação concluída: ${result.successCount} importados, ${result.errorCount} erros`);
-    setShowImportModal(false);
-    setImportFile(null);
-    fetchComponents();
-  } catch (error: any) {
-    setError(`Erro ao importar arquivo: ${error.message}`);
-  } finally {
-    setImporting(false);
-  }
-};
-
-  const handleDownloadTemplate = () => {
-    exportService.downloadImportTemplate();
-  };
+  const componentsInSelectedGroup = selectedGroupMaintenance 
+    ? components.filter(c => c.group === selectedGroupMaintenance)
+    : [];
 
   return (
     <div className="p-6">
@@ -314,48 +385,66 @@ if (uniqueValues.length > 0) {
               <span className="font-medium">Importar</span>
             </button>
             
+            <button
+              onClick={handleCreateProduct}
+              disabled={selectedComponents.size === 0}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                selectedComponents.size > 0
+                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <ShoppingBag size={18} />
+              <span className="font-medium">Criar Produto</span>
+            </button>
+            
+            <button
+              onClick={() => setIsEditMode(!isEditMode)}
+              disabled={selectedComponents.size === 0}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                selectedComponents.size > 0
+                  ? 'bg-gray-600 text-white hover:bg-gray-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <Pencil size={18} />
+              <span className="font-medium">Editar</span>
+            </button>
+            
+            <button
+              onClick={() => setDeleteModal({ show: true, components: components.filter(c => selectedComponents.has(c.id)) })}
+              disabled={selectedComponents.size === 0}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                selectedComponents.size > 0
+                  ? 'bg-red-600 text-white hover:bg-red-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <Trash2 size={18} />
+              <span className="font-medium">Deletar</span>
+            </button>
+            
+            <button
+              onClick={handleExport}
+              disabled={selectedComponents.size === 0}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
+                selectedComponents.size > 0
+                  ? 'bg-purple-600 text-white hover:bg-purple-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              <FileSpreadsheet size={18} />
+              <span className="font-medium">Exportar</span>
+            </button>
+            
             {selectedComponents.size > 0 && (
-              <>
-                <button
-                  onClick={handleCreateProduct}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200"
-                >
-                  <ShoppingBag size={18} />
-                  <span className="font-medium">Criar Produto</span>
-                </button>
-                
-                <button
-                  onClick={() => setIsEditMode(!isEditMode)}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200"
-                >
-                  <Pencil size={18} />
-                  <span className="font-medium">Editar</span>
-                </button>
-                
-                <button
-                  onClick={() => setDeleteModal({ show: true, components: components.filter(c => selectedComponents.has(c.id)) })}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
-                >
-                  <Trash2 size={18} />
-                  <span className="font-medium">Deletar</span>
-                </button>
-                
-                <button
-                  onClick={handleExport}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200"
-                >
-                  <FileSpreadsheet size={18} />
-                  <span className="font-medium">Exportar</span>
-                </button>
-                
-                <button
-                  onClick={() => setSelectedComponents(new Set())}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-all duration-200"
-                >
-                  <X size={18} />
-                  <span className="font-medium">Cancelar Seleção</span>
-                </button>
-              </>
+              <button
+                onClick={() => setSelectedComponents(new Set())}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-all duration-200"
+              >
+                <X size={18} />
+                <span className="font-medium">Cancelar Seleção</span>
+              </button>
             )}
             
             {isEditMode && (
@@ -375,344 +464,680 @@ if (uniqueValues.length > 0) {
       {error && <ErrorMessage message={error} onClose={() => setError('')} className="mb-6" />}
       {success && <SuccessMessage message={success} onClose={() => setSuccess('')} className="mb-6" />}
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Filter size={20} className="text-gray-500" />
-          <h2 className="text-lg font-semibold text-gray-800">Filtros</h2>
+      {/* Tabs */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+        <div className="flex border-b border-gray-200">
+          <button
+            onClick={() => setActiveTab('components')}
+            className={`px-6 py-3 font-medium transition-all duration-200 ${
+              activeTab === 'components'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            Componentes
+          </button>
+          <button
+            onClick={() => setActiveTab('groups')}
+            className={`px-6 py-3 font-medium transition-all duration-200 ${
+              activeTab === 'groups'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-600 hover:text-gray-800'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              <Settings size={18} />
+              Manutenção de Grupos
+            </div>
+          </button>
         </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {/* Grupo */}
-          <div className="relative">
+      </div>
+
+      {activeTab === 'components' ? (
+        <>
+          {/* Filters */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Filter size={20} className="text-gray-500" />
+              <h2 className="text-lg font-semibold text-gray-800">Filtros</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {/* Grupo */}
+              <select
+                value={filters.group || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, group: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Todos os Grupos</option>
+                {groups.map(group => (
+                  <option key={group} value={group}>{group}</option>
+                ))}
+              </select>
+
+              {/* Device */}
+              <select
+                value={filters.device || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, device: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Todos os Devices</option>
+                {devices.map(device => (
+                  <option key={device} value={device}>{device}</option>
+                ))}
+              </select>
+
+              {/* Package */}
+              <select
+                value={filters.package || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, package: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Todos os Packages</option>
+                {packages.map(pkg => (
+                  <option key={pkg} value={pkg}>{pkg}</option>
+                ))}
+              </select>
+
+              {/* Value */}
+              <select
+                value={filters.value || ''}
+                onChange={(e) => setFilters(prev => ({ ...prev, value: e.target.value }))}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+              >
+                <option value="">Todos os Values</option>
+                {values.map(value => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+
+              {/* Search */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="Buscar em todas as colunas..."
+                  value={filters.searchTerm}
+                  onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+                <button
+                  onClick={handleSearch}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
+                >
+                  <Search size={18} />
+                </button>
+              </div>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between mt-4">
+              <select
+                value={filters.pageSize}
+                onChange={(e) => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), pageNumber: 1 }))}
+                className="px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+              >
+                {PAGINATION.PAGE_SIZE_OPTIONS.map(size => (
+                  <option key={size} value={size}>{size} por página</option>
+                ))}
+              </select>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, pageNumber: Math.max(1, prev.pageNumber - 1) }))}
+                  disabled={filters.pageNumber === 1}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Anterior
+                </button>
+                <span className="px-4 py-1.5 text-sm text-gray-600">
+                  Página {filters.pageNumber}
+                </span>
+                <button
+                  onClick={() => setFilters(prev => ({ ...prev, pageNumber: prev.pageNumber + 1 }))}
+                  disabled={components.length < filters.pageSize}
+                  className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Próxima
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {loading ? (
+              <div className="p-12 text-center">
+                <LoadingSpinner size="lg" message="Carregando componentes..." />
+              </div>
+            ) : components.length === 0 ? (
+              <div className="p-12 text-center">
+                <Package className="mx-auto mb-4 text-gray-400" size={48} />
+                <p className="text-lg font-medium text-gray-600">Nenhum componente encontrado</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  {filters.searchTerm || filters.group || filters.device || filters.package || filters.value
+                    ? "Tente ajustar os filtros de busca" 
+                    : "Adicione novos componentes ao sistema"}
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-3 py-4">
+                        <button
+                          onClick={handleSelectAll}
+                          className="text-gray-600 hover:text-gray-800"
+                        >
+                          {selectedComponents.size === components.length ? 
+                            <CheckSquare size={20} /> : 
+                            <Square size={20} />
+                          }
+                        </button>
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Grupo
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Device
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Value
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Package
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Características
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Código Interno
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Gaveta
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Divisão
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Quantidade em Estoque
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Data de Entrada
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Preço
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Entrada
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Saída
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        NCM
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        NVE
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ambiente
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Ações
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {components.map((component) => {
+                      const status = getStockStatus(component.quantityInStock, component.minimumQuantity);
+                      const isSelected = selectedComponents.has(component.id);
+                      const isEditing = editingRow === component.id;
+                      const componentData = isEditing && editedComponent ? editedComponent : component;
+                      
+                      return (
+                        <tr 
+                          key={component.id} 
+                          className={`hover:bg-gray-50 transition-colors duration-150 ${isSelected ? 'bg-blue-50' : ''}`}
+                        >
+                          <td className="px-3 py-4">
+                            <button
+                              onClick={() => handleSelectComponent(component.id)}
+                              className="text-gray-600 hover:text-gray-800"
+                            >
+                              {isSelected ? 
+                                <CheckSquare size={18} className="text-blue-600" /> : 
+                                <Square size={18} />
+                              }
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.group}
+                                onChange={(e) => setEditedComponent({...editedComponent!, group: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.group
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.device || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, device: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.device || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.value || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, value: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.value || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.package || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, package: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.package || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.characteristics || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, characteristics: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.characteristics || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.internalCode || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, internalCode: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.internalCode || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.drawer || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, drawer: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.drawer || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.division || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, division: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.division || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                value={componentData.quantityInStock}
+                                onChange={(e) => setEditedComponent({...editedComponent!, quantityInStock: Number(e.target.value)})}
+                                className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              <p className="text-sm font-medium text-gray-900">{component.quantityInStock}</p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {component.createdAt ? new Date(component.createdAt).toLocaleDateString('pt-BR') : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={componentData.price || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, price: Number(e.target.value)})}
+                                className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.price ? `R$ ${component.price.toFixed(2)}` : '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={stockEntries.get(component.id)?.entryQuantity || ''}
+                                onChange={(e) => handleStockEntry(component.id, 'entry', e.target.value)}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                placeholder="0"
+                              />
+                            ) : isEditMode ? (
+                              <input
+                                type="number"
+                                min="0"
+                                value={stockEntries.get(component.id)?.entryQuantity || ''}
+                                onChange={(e) => handleStockEntry(component.id, 'entry', e.target.value)}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                placeholder="0"
+                              />
+                            ) : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <input
+                                type="number"
+                                min="0"
+                                max={componentData.quantityInStock}
+                                value={stockEntries.get(component.id)?.exitQuantity || ''}
+                                onChange={(e) => handleStockEntry(component.id, 'exit', e.target.value)}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                placeholder="0"
+                              />
+                            ) : isEditMode ? (
+                              <input
+                                type="number"
+                                min="0"
+                                max={component.quantityInStock}
+                                value={stockEntries.get(component.id)?.exitQuantity || ''}
+                                onChange={(e) => handleStockEntry(component.id, 'exit', e.target.value)}
+                                className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                                placeholder="0"
+                              />
+                            ) : '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.ncm || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, ncm: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.ncm || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                value={componentData.nve || ''}
+                                onChange={(e) => setEditedComponent({...editedComponent!, nve: e.target.value})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                              />
+                            ) : (
+                              component.nve || '-'
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <select
+                                value={componentData.environment || 'estoque'}
+                                onChange={(e) => setEditedComponent({...editedComponent!, environment: e.target.value as 'estoque' | 'laboratorio'})}
+                                className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200 bg-white"
+                              >
+                                <option value="estoque">Estoque</option>
+                                <option value="laboratorio">Laboratório</option>
+                              </select>
+                            ) : (
+                              <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                                component.environment === 'laboratorio' 
+                                  ? 'bg-purple-100 text-purple-800' 
+                                  : 'bg-green-100 text-green-800'
+                              }`}>
+                                {component.environment === 'laboratorio' ? 'Laboratório' : 'Estoque'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStockStatusColor(status)}`}>
+                              {status === 'critical' && <AlertCircle size={12} />}
+                              {status === 'critical' ? 'Crítico' : status === 'low' ? 'Baixo' : 'Normal'}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            {isEditing ? (
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={handleSaveEdit}
+                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                  title="Salvar"
+                                >
+                                  <Check size={18} />
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Cancelar"
+                                >
+                                  <X size={18} />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditRow(component)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                title="Editar"
+                              >
+                                <Pencil size={18} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* Aba Manutenção de Grupos */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-6">Manutenção de Grupos</h2>
+          
+          {/* Seleção de Grupo */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Selecione um Grupo
+            </label>
             <select
-              value={filters.group || ''}
-              onChange={(e) => setFilters(prev => ({ ...prev, group: e.target.value }))}
-              className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
+              value={selectedGroupMaintenance}
+              onChange={(e) => setSelectedGroupMaintenance(e.target.value)}
+              className="w-full max-w-md px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
             >
-              <option value="">Todos os Grupos</option>
+              <option value="">Selecione um grupo...</option>
               {groups.map(group => (
                 <option key={group} value={group}>{group}</option>
               ))}
             </select>
-            <button
-              onClick={() => setShowNewGroup(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
-              title="Novo Grupo"
-            >
-              <Plus size={18} />
-            </button>
           </div>
 
-          {/* Device */}
-          <div className="relative">
-            <select
-              value={filters.device || ''}
-              onChange={(e) => setFilters(prev => ({ ...prev, device: e.target.value }))}
-              className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-            >
-              <option value="">Todos os Devices</option>
-              {devices.map(device => (
-                <option key={device} value={device}>{device}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowNewDevice(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
-              title="Novo Device"
-            >
-              <Plus size={18} />
-            </button>
+          {/* Adicionar Novos Itens */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Novo Grupo
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  placeholder="Nome do grupo"
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+                <button
+                  onClick={handleAddNewGroup}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Novo Device
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newDeviceName}
+                  onChange={(e) => setNewDeviceName(e.target.value)}
+                  placeholder="Nome do device"
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+                <button
+                  onClick={handleAddNewDevice}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Novo Package
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newPackageName}
+                  onChange={(e) => setNewPackageName(e.target.value)}
+                  placeholder="Nome do package"
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+                <button
+                  onClick={handleAddNewPackage}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Novo Value
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newValueName}
+                  onChange={(e) => setNewValueName(e.target.value)}
+                  placeholder="Nome do value"
+                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                />
+                <button
+                  onClick={handleAddNewValue}
+                  className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
+                >
+                  <Plus size={18} />
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Package */}
-          <div className="relative">
-            <select
-              value={filters.package || ''}
-              onChange={(e) => setFilters(prev => ({ ...prev, package: e.target.value }))}
-              className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-            >
-              <option value="">Todos os Packages</option>
-              {packages.map(pkg => (
-                <option key={pkg} value={pkg}>{pkg}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowNewPackage(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
-              title="Novo Package"
-            >
-              <Plus size={18} />
-            </button>
-          </div>
-
-          {/* Value */}
-          <div className="relative">
-            <select
-              value={filters.value || ''}
-              onChange={(e) => setFilters(prev => ({ ...prev, value: e.target.value }))}
-              className="w-full px-4 py-2.5 pr-10 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-            >
-              <option value="">Todos os Values</option>
-              {values.map(value => (
-                <option key={value} value={value}>{value}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => setShowNewValue(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-700"
-              title="Novo Value"
-            >
-              <Plus size={18} />
-            </button>
-          </div>
-
-          {/* Search */}
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Buscar em todas as colunas..."
-              value={filters.searchTerm}
-              onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-            />
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
-            >
-              <Search size={18} />
-            </button>
-          </div>
+          {/* Componentes do Grupo Selecionado */}
+          {selectedGroupMaintenance && (
+            <div className="mt-8">
+              <h3 className="text-md font-semibold text-gray-800 mb-4">
+                Componentes do grupo "{selectedGroupMaintenance}" ({componentsInSelectedGroup.length})
+              </h3>
+              
+              {componentsInSelectedGroup.length === 0 ? (
+                <p className="text-gray-500">Nenhum componente neste grupo</p>
+              ) : (
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="min-w-full bg-gray-50">
+                    <thead className="bg-gray-100 border-b border-gray-200">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Nome
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Device
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Value
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Package
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Estoque
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {componentsInSelectedGroup.map((component) => (
+                        <tr key={component.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {component.name}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {component.device || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {component.value || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {component.package || '-'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                            {component.quantityInStock}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
         </div>
-
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between mt-4">
-          <select
-            value={filters.pageSize}
-            onChange={(e) => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), pageNumber: 1 }))}
-            className="px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            {PAGINATION.PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size}>{size} por página</option>
-            ))}
-          </select>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, pageNumber: Math.max(1, prev.pageNumber - 1) }))}
-              disabled={filters.pageNumber === 1}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <span className="px-4 py-1.5 text-sm text-gray-600">
-              Página {filters.pageNumber}
-            </span>
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, pageNumber: prev.pageNumber + 1 }))}
-              disabled={components.length < filters.pageSize}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Próxima
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="p-12 text-center">
-            <LoadingSpinner size="lg" message="Carregando componentes..." />
-          </div>
-        ) : components.length === 0 ? (
-          <div className="p-12 text-center">
-            <Package className="mx-auto mb-4 text-gray-400" size={48} />
-            <p className="text-lg font-medium text-gray-600">Nenhum componente encontrado</p>
-            <p className="text-sm text-gray-500 mt-1">
-              {filters.searchTerm || filters.group || filters.device || filters.package || filters.value
-                ? "Tente ajustar os filtros de busca" 
-                : "Adicione novos componentes ao sistema"}
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-3 py-4">
-                    <button
-                      onClick={handleSelectAll}
-                      className="text-gray-600 hover:text-gray-800"
-                    >
-                      {selectedComponents.size === components.length ? 
-                        <CheckSquare size={20} /> : 
-                        <Square size={20} />
-                      }
-                    </button>
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grupo
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Device
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Value
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Package
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Características
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Código Interno
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Gaveta
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Divisão
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantidade em Estoque
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data de Entrada
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Preço
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entrada
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saída
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    NCM
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    NVE
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ambiente
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {components.map((component) => {
-                  const status = getStockStatus(component.quantityInStock, component.minimumQuantity);
-                  const isSelected = selectedComponents.has(component.id);
-                  
-                  return (
-                    <tr 
-                      key={component.id} 
-                      className={`hover:bg-gray-50 transition-colors duration-150 ${isSelected ? 'bg-blue-50' : ''}`}
-                    >
-                      <td className="px-3 py-4">
-                        <button
-                          onClick={() => handleSelectComponent(component.id)}
-                          className="text-gray-600 hover:text-gray-800"
-                        >
-                          {isSelected ? 
-                            <CheckSquare size={18} className="text-blue-600" /> : 
-                            <Square size={18} />
-                          }
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.group}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.device || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.value || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.package || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.characteristics || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.internalCode || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.drawer || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.division || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="text-sm font-medium text-gray-900">{component.quantityInStock}</p>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.createdAt ? new Date(component.createdAt).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.price ? `R$ ${component.price.toFixed(2)}` : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isEditMode ? (
-                          <input
-                            type="number"
-                            min="0"
-                            value={stockEntries.get(component.id)?.entryQuantity || ''}
-                            onChange={(e) => handleStockEntry(component.id, 'entry', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                            placeholder="0"
-                          />
-                        ) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isEditMode ? (
-                          <input
-                            type="number"
-                            min="0"
-                            max={component.quantityInStock}
-                            value={stockEntries.get(component.id)?.exitQuantity || ''}
-                            onChange={(e) => handleStockEntry(component.id, 'exit', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                            placeholder="0"
-                          />
-                        ) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.ncm || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.nve || '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                          component.environment === 'laboratorio' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
-                          {component.environment === 'laboratorio' ? 'Laboratório' : 'Estoque'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStockStatusColor(status)}`}>
-                          {status === 'critical' && <AlertCircle size={12} />}
-                          {status === 'critical' ? 'Crítico' : status === 'low' ? 'Baixo' : 'Normal'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Delete Modal */}
       <ConfirmModal
@@ -724,143 +1149,6 @@ if (uniqueValues.length > 0) {
         confirmText="Excluir"
         type="danger"
       />
-
-      {/* Modais para novos itens */}
-      {/* Modal Novo Grupo */}
-      {showNewGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Novo Grupo</h3>
-            <input
-              type="text"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
-              placeholder="Nome do grupo"
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowNewGroup(false);
-                  setNewGroupName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddNewGroup}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Novo Device */}
-      {showNewDevice && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Novo Device</h3>
-            <input
-              type="text"
-              value={newDeviceName}
-              onChange={(e) => setNewDeviceName(e.target.value)}
-              placeholder="Nome do device"
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowNewDevice(false);
-                  setNewDeviceName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddNewDevice}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Novo Package */}
-      {showNewPackage && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Novo Package</h3>
-            <input
-              type="text"
-              value={newPackageName}
-              onChange={(e) => setNewPackageName(e.target.value)}
-              placeholder="Nome do package"
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowNewPackage(false);
-                  setNewPackageName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddNewPackage}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Novo Value */}
-      {showNewValue && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Novo Value</h3>
-            <input
-              type="text"
-              value={newValueName}
-              onChange={(e) => setNewValueName(e.target.value)}
-              placeholder="Nome do value"
-              className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 mb-4"
-              autoFocus
-            />
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowNewValue(false);
-                  setNewValueName('');
-                }}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleAddNewValue}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Adicionar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modal de Importação */}
       {showImportModal && (
