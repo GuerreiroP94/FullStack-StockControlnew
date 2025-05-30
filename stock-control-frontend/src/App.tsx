@@ -10,6 +10,7 @@ import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ComponentsListPage from './pages/components/ComponentsListPage';
 import ComponentFormPage from './pages/components/ComponentFormPage';
+import GroupsMaintenancePage from './pages/components/GroupsMaintenancePage';
 import ProductsListPage from './pages/products/ProductsListPage';
 import ProductFormPage from './pages/products/ProductFormPage';
 import MovementsListPage from './pages/movements/MovementsListPage';
@@ -36,6 +37,7 @@ function App() {
               <Route path="/components" element={<ComponentsListPage />} />
               <Route path="/components/new" element={<ComponentFormPage />} />
               <Route path="/components/:id/edit" element={<ComponentFormPage />} />
+              <Route path="/components/maintenance" element={<GroupsMaintenancePage />} />
               
               {/* Products */}
               <Route path="/products" element={<ProductsListPage />} />

@@ -14,7 +14,8 @@ import {
   PlusCircle,
   Settings,
   LogOut,
-  User
+  User,
+  Wrench
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -28,6 +29,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [productsSubmenuOpen, setProductsSubmenuOpen] = useState(false);
+  const [componentsSubmenuOpen, setComponentsSubmenuOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -45,7 +47,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
       path: '/components',
       name: 'Componentes',
       icon: Cpu,
-      show: true
+      show: true,
+      hasSubmenu: true,
+      submenu: [
+        {
+          path: '/components',
+          name: 'Lista de Componentes',
+          icon: Cpu
+        },
+        {
+          path: '/components/maintenance',
+          name: 'Manutenção de Grupos',
+          icon: Wrench
+        }
+      ]
     },
     {
       path: '/products',
@@ -88,6 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
 
   const filteredMenuItems = menuItems.filter(item => item.show);
   const isProductsActive = location.pathname.startsWith('/products');
+  const isComponentsActive = location.pathname.startsWith('/components');
 
   // Função para obter as iniciais do nome
   const getInitials = (name: string) => {
@@ -155,9 +171,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
               {item.hasSubmenu ? (
                 <>
                   <button
-                    onClick={() => setProductsSubmenuOpen(!productsSubmenuOpen)}
+                    onClick={() => {
+                      if (item.name === 'Produtos') {
+                        setProductsSubmenuOpen(!productsSubmenuOpen);
+                      } else if (item.name === 'Componentes') {
+                        setComponentsSubmenuOpen(!componentsSubmenuOpen);
+                      }
+                    }}
                     className={`w-full flex items-center ${isOpen ? 'justify-between' : 'justify-center'} gap-3 px-3 py-2.5 rounded-lg transition-all duration-200
-                      ${isProductsActive 
+                      ${(item.name === 'Produtos' && isProductsActive) || (item.name === 'Componentes' && isComponentsActive)
                         ? 'bg-blue-50 text-blue-600' 
                         : 'text-gray-700 hover:bg-gray-100'
                       }
@@ -172,19 +194,24 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
                       <ChevronDown 
                         size={16} 
                         className={`transition-transform duration-200 ${
-                          productsSubmenuOpen ? 'rotate-180' : ''
+                          (item.name === 'Produtos' && productsSubmenuOpen) || 
+                          (item.name === 'Componentes' && componentsSubmenuOpen) 
+                            ? 'rotate-180' : ''
                         }`}
                       />
                     )}
                   </button>
                   
-                  {isOpen && productsSubmenuOpen && item.submenu && (
+                  {isOpen && item.submenu && (
+                    (item.name === 'Produtos' && productsSubmenuOpen) || 
+                    (item.name === 'Componentes' && componentsSubmenuOpen)
+                  ) && (
                     <div className="ml-9 mt-1 space-y-1">
                       {item.submenu.map((subItem) => (
                         <NavLink
                           key={subItem.path}
                           to={subItem.path}
-                          end={subItem.path === '/products'}
+                          end={subItem.path === '/products' || subItem.path === '/components'}
                           className={({ isActive }) => `
                             flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all duration-200
                             ${isActive 
@@ -241,14 +268,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
           </NavLink>
 
           {/* Logout */}
-<button
-  onClick={handleLogout}
-  className={`w-full flex items-center ${isOpen ? 'gap-3' : 'justify-center'} px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200`}
-  title={!isOpen ? "Sair" : undefined}
->
-  <LogOut size={20} />
-  {isOpen && <span className="font-medium">Sair</span>}
-</button>
+          <button
+            onClick={handleLogout}
+            className={`w-full flex items-center ${isOpen ? 'gap-3' : 'justify-center'} px-3 py-2.5 rounded-lg text-red-600 hover:bg-red-50 hover:text-red-700 transition-all duration-200`}
+            title={!isOpen ? "Sair" : undefined}
+          >
+            <LogOut size={20} />
+            {isOpen && <span className="font-medium">Sair</span>}
+          </button>
         </div>
 
         {/* Footer - apenas quando expandido */}
