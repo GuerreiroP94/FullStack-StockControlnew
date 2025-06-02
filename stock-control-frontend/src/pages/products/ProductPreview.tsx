@@ -11,11 +11,12 @@ import {
   Cpu,
   Calculator
 } from 'lucide-react';
-import { Component } from '../../types';
+import { Component, ProductWithPriority } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 
+
 interface ProductPreviewProps {
-  product: any; // ProductWithPriority
+  product: ProductWithPriority; 
   components: Component[];
   onClose: () => void;
 }

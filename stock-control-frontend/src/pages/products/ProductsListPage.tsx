@@ -24,35 +24,15 @@ import {
 import productsService from '../../services/products.service';
 import componentsService from '../../services/components.service';
 import exportService from '../../services/export.service';
-import { Product, ProductQueryParameters, Component } from '../../types';
+import { Product, ProductQueryParameters, Component, ProductWithPriority, ProductCalculation, ProductionPlanRow } from '../../types';
 import { PAGINATION } from '../../utils/constants';
 import { formatDate, formatCurrency } from '../../utils/helpers';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
-import ProductPreview from '../../../components/products/ProductPreview';
+import ProductPreview from '../products/ProductPreview';
 
-interface ProductWithPriority extends Product {
-  priority?: number;
-  fixedCalculation?: {
-    totalCost: number;
-    calculatedAt: string;
-    componentsSnapshot: Array<{
-      componentId: number;
-      name: string;
-      quantity: number;
-      unitPrice: number;
-      totalPrice: number;
-    }>;
-  };
-  calculationHistory?: Array<{
-    id: string;
-    calculatedAt: string;
-    totalCost: number;
-    components: any[];
-  }>;
-}
 
 const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -83,31 +63,41 @@ const ProductsListPage: React.FC = () => {
   }, [queryParams]);
 
   const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      const data = await productsService.getAll(queryParams);
+  try {
+    setLoading(true);
+    const data = await productsService.getAll(queryParams);
+    
+    // Carregar dados adicionais salvos no localStorage
+    const savedPriorities = localStorage.getItem('productPriorities');
+    const savedCalculations = localStorage.getItem('productCalculations');
+    
+    const priorities = savedPriorities ? JSON.parse(savedPriorities) : {};
+    const calculations = savedCalculations ? JSON.parse(savedCalculations) : {};
+    
+    const enhancedProducts: ProductWithPriority[] = data.map(product => {
+      const calculation = calculations[product.id];
       
-      // Carregar dados adicionais salvos no localStorage (temporário)
-      const savedPriorities = localStorage.getItem('productPriorities');
-      const savedCalculations = localStorage.getItem('productCalculations');
-      
-      const priorities = savedPriorities ? JSON.parse(savedPriorities) : {};
-      const calculations = savedCalculations ? JSON.parse(savedCalculations) : {};
-      
-      const enhancedProducts = data.map(product => ({
+      return {
         ...product,
         priority: priorities[product.id] || null,
-        fixedCalculation: calculations[product.id] || null
-      }));
-      
-      setProducts(enhancedProducts);
-    } catch (error) {
-      setError('Erro ao carregar produtos');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        fixedCalculation: calculation ? {
+          id: calculation.id,
+          calculatedAt: calculation.calculatedAt,
+          totalCost: calculation.totalCost,
+          componentsSnapshot: calculation.componentsSnapshot
+        } : null,
+        calculationHistory: calculation?.calculationHistory || []
+      };
+    });
+    
+    setProducts(enhancedProducts);
+  } catch (error) {
+    setError('Erro ao carregar produtos');
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const fetchComponents = async () => {
     try {
@@ -183,92 +173,98 @@ const ProductsListPage: React.FC = () => {
     }
   };
 
-  const calculateProduction = (product: ProductWithPriority) => {
-    const calculation = product.components.map(comp => {
-      const component = components.find(c => c.id === comp.componentId);
-      if (!component) return null;
-
-      return {
-        componentId: comp.componentId,
-        name: comp.componentName,
-        quantity: comp.quantity,
-        unitPrice: component.price || 0,
-        totalPrice: (component.price || 0) * comp.quantity
-      };
-    }).filter(Boolean);
-
-    const totalCost = calculation.reduce((sum, item) => sum + (item?.totalPrice || 0), 0);
+  const calculateProduction = (product: ProductWithPriority): ProductCalculation => {
+  const componentsSnapshot = product.components.map(comp => {
+    const component = components.find(c => c.id === comp.componentId);
+    if (!component) return null;
 
     return {
-      totalCost,
-      calculatedAt: new Date().toISOString(),
-      componentsSnapshot: calculation
+      componentId: comp.componentId,
+      name: comp.componentName,
+      quantity: comp.quantity,
+      unitPrice: component.price || 0,
+      totalPrice: (component.price || 0) * comp.quantity
     };
+  }).filter((item): item is ProductCalculation['componentsSnapshot'][0] => item !== null);
+
+  const totalCost = componentsSnapshot.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  return {
+    id: Date.now().toString(), // Adicione um ID único
+    totalCost,
+    calculatedAt: new Date().toISOString(),
+    componentsSnapshot
   };
+};
 
   const handleRecalculateProduction = async (product: ProductWithPriority) => {
-    setRecalculatingProduct(product.id);
+  setRecalculatingProduct(product.id);
+  
+  try {
+    const newCalculation = calculateProduction(product);
     
-    try {
-      const newCalculation = calculateProduction(product);
+    if (product.fixedCalculation && 
+        Math.abs(newCalculation.totalCost - product.fixedCalculation.totalCost) < 0.01) {
+      setSuccess('Não houve alteração nos preços. Nada será alterado.');
+      setRecalculatingProduct(null);
+      return;
+    }
+
+    // Mostrar modal de confirmação
+    const confirmed = window.confirm(
+      `O valor da produção mudou de ${formatCurrency(product.fixedCalculation?.totalCost || 0)} ` +
+      `para ${formatCurrency(newCalculation.totalCost)}.\n\n` +
+      `Deseja confirmar o recálculo? Isso criará um novo histórico.`
+    );
+
+    if (confirmed) {
+      // Salvar novo cálculo
+      const calculations = JSON.parse(localStorage.getItem('productCalculations') || '{}');
       
-      if (product.fixedCalculation && 
-          Math.abs(newCalculation.totalCost - product.fixedCalculation.totalCost) < 0.01) {
-        setSuccess('Não houve alteração nos preços. Nada será alterado.');
-        setRecalculatingProduct(null);
-        return;
+      // Estruturar o histórico corretamente
+      const productCalc = calculations[product.id] || {
+        ...newCalculation,
+        calculationHistory: []
+      };
+
+      // Se já existe um cálculo fixado, adicionar ao histórico
+      if (product.fixedCalculation) {
+        productCalc.calculationHistory = [
+          ...(productCalc.calculationHistory || []),
+          product.fixedCalculation
+        ];
       }
 
-      // Mostrar modal de confirmação
-      const confirmed = window.confirm(
-        `O valor da produção mudou de ${formatCurrency(product.fixedCalculation?.totalCost || 0)} ` +
-        `para ${formatCurrency(newCalculation.totalCost)}.\n\n` +
-        `Deseja confirmar o recálculo? Isso criará um novo histórico.`
+      // Atualizar com o novo cálculo
+      calculations[product.id] = {
+        ...newCalculation,
+        calculationHistory: productCalc.calculationHistory
+      };
+
+      localStorage.setItem('productCalculations', JSON.stringify(calculations));
+      
+      // Atualizar estado local
+      setProducts(prevProducts => 
+        prevProducts.map(p => 
+          p.id === product.id 
+            ? { 
+                ...p, 
+                fixedCalculation: newCalculation,
+                calculationHistory: calculations[product.id].calculationHistory
+              }
+            : p
+        )
       );
 
-      if (confirmed) {
-        // Salvar novo cálculo
-        const calculations = JSON.parse(localStorage.getItem('productCalculations') || '{}');
-        
-        // Adicionar ao histórico
-        if (!calculations[product.id]) {
-          calculations[product.id] = {
-            ...newCalculation,
-            calculationHistory: []
-          };
-        } else {
-          if (!calculations[product.id].calculationHistory) {
-            calculations[product.id].calculationHistory = [];
-          }
-          calculations[product.id].calculationHistory.push({
-            id: Date.now().toString(),
-            ...calculations[product.id]
-          });
-          calculations[product.id] = {
-            ...calculations[product.id],
-            ...newCalculation
-          };
-        }
-
-        localStorage.setItem('productCalculations', JSON.stringify(calculations));
-        
-        // Atualizar estado local
-        setProducts(prevProducts => 
-          prevProducts.map(p => 
-            p.id === product.id 
-              ? { ...p, fixedCalculation: calculations[product.id] }
-              : p
-          )
-        );
-
-        setSuccess('Produção recalculada com sucesso!');
-      }
-    } catch (error) {
-      setError('Erro ao recalcular produção');
-    } finally {
-      setRecalculatingProduct(null);
+      setSuccess('Produção recalculada com sucesso!');
     }
-  };
+  } catch (error) {
+    setError('Erro ao recalcular produção');
+    console.error(error);
+  } finally {
+    setRecalculatingProduct(null);
+  }
+};
 
   const handleExportToExcel = () => {
     const productsToExport = products
@@ -283,41 +279,41 @@ const ProductsListPage: React.FC = () => {
     setShowExportModal(true);
   };
 
-  const confirmExport = () => {
-    const productsToExport = products
-      .filter(p => p.priority)
-      .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+ const confirmExport = () => {
+  const productsToExport = products
+    .filter(p => p.priority)
+    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
 
-    const exportData = productsToExport.flatMap(product => {
-      const quantity = exportQuantities.get(product.id) || 1;
-      
-      return product.components.map(comp => {
-        const component = components.find(c => c.id === comp.componentId);
-        if (!component) return null;
+  const exportData: ProductionPlanRow[] = productsToExport.flatMap(product => {
+    const quantity = exportQuantities.get(product.id) || 1;
+    
+    return product.components.map(comp => {
+      const component = components.find(c => c.id === comp.componentId);
+      if (!component) return null;
 
-        const totalNeeded = comp.quantity * quantity;
-        const toBuy = Math.max(0, totalNeeded - component.quantityInStock);
+      const totalNeeded = comp.quantity * quantity;
+      const toBuy = Math.max(0, totalNeeded - component.quantityInStock);
 
-        return {
-          qtdFabricar: quantity,
-          qtdTotal: comp.quantity,
-          device: component.device || '',
-          value: component.value || '',
-          package: component.package || '',
-          caracteristicas: component.characteristics || '',
-          codigo: component.internalCode || '',
-          gaveta: component.drawer || '',
-          divisao: component.division || '',
-          qtdEstoque: component.quantityInStock,
-          qtdCompra: toBuy
-        };
-      }).filter(Boolean);
-    }).filter(Boolean);
+      return {
+        qtdFabricar: quantity,
+        qtdTotal: comp.quantity,
+        device: component.device || '',
+        value: component.value || '',
+        package: component.package || '',
+        caracteristicas: component.characteristics || '',
+        codigo: component.internalCode || '',
+        gaveta: component.drawer || '',
+        divisao: component.division || '',
+        qtdEstoque: component.quantityInStock,
+        qtdCompra: toBuy
+      };
+    }).filter((item): item is ProductionPlanRow => item !== null);
+  });
 
-    exportService.exportProductionPlan(exportData);
-    setShowExportModal(false);
-    setSuccess('Planilha de produção exportada com sucesso!');
-  };
+  exportService.exportProductionPlan(exportData);
+  setShowExportModal(false);
+  setSuccess('Planilha de produção exportada com sucesso!');
+};
 
   const productsWithPriority = products.filter(p => p.priority).length;
 

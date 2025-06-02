@@ -81,6 +81,22 @@ export interface Product {
   createdAt: string;
   createdBy?: string;
   components: ProductComponent[];
+  priority?: number;
+  fixedCalculation?: ProductCalculation;
+  calculationHistory?: ProductCalculation[];
+}
+
+export interface ProductCalculation {
+  id: string;
+  totalCost: number;
+  calculatedAt: string;
+  componentsSnapshot: Array<{
+    componentId: number;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
 }
 
 export interface ProductComponent {
@@ -177,4 +193,40 @@ export interface AuthContextType {
   updateCurrentUser: (user: User) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+}
+
+// Interface para o cálculo de produção
+export interface ProductCalculation {
+  id: string;
+  calculatedAt: string;
+  totalCost: number;
+  componentsSnapshot: Array<{
+    componentId: number;
+    name: string;
+    quantity: number;
+    unitPrice: number;
+    totalPrice: number;
+  }>;
+}
+
+// Interface para produtos com prioridade
+export interface ProductWithPriority extends Product {
+  priority?: number;
+  fixedCalculation?: ProductCalculation;
+  calculationHistory?: ProductCalculation[];
+}
+
+// Interface para linha do plano de produção
+export interface ProductionPlanRow {
+  qtdFabricar: number;
+  qtdTotal: number;
+  device: string;
+  value: string;
+  package: string;
+  caracteristicas: string;
+  codigo: string;
+  gaveta: string;
+  divisao: string;
+  qtdEstoque: number;
+  qtdCompra: number;
 }
