@@ -1,3 +1,5 @@
+// ProductPreview.tsx - Versão completa com todas as correções
+
 import React from 'react';
 import {
   X,
@@ -14,9 +16,8 @@ import {
 import { Component, ProductWithPriority } from '../../types';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 
-
 interface ProductPreviewProps {
-  product: ProductWithPriority; 
+  product: ProductWithPriority;
   components: Component[];
   onClose: () => void;
 }
@@ -49,7 +50,9 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({ product, components, on
 
   const currentProduction = calculateCurrentProduction();
   const hasFixedCalculation = !!product.fixedCalculation;
-  const priceDifference = hasFixedCalculation 
+  
+  // ✅ CORREÇÃO 1: Adicionar verificação antes de acessar totalCost
+  const priceDifference = hasFixedCalculation && product.fixedCalculation
     ? currentProduction.totalCost - product.fixedCalculation.totalCost 
     : 0;
 
@@ -94,7 +97,7 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({ product, components, on
         {/* Valores de Produção */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Cálculo Fixado */}
-          {hasFixedCalculation && (
+          {hasFixedCalculation && product.fixedCalculation && (
             <div className="bg-white rounded-lg p-4 border border-gray-200">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
@@ -102,11 +105,13 @@ const ProductPreview: React.FC<ProductPreviewProps> = ({ product, components, on
                   Valor Fixado (Inicial)
                 </h4>
                 <span className="text-xs text-gray-500">
-                  {formatDateTime(product.fixedCalculation.calculatedAt)}
+                  {/* ✅ CORREÇÃO 2: Usar optional chaining */}
+                  {formatDateTime(product.fixedCalculation?.calculatedAt || '')}
                 </span>
               </div>
               <p className="text-2xl font-bold text-green-600">
-                {formatCurrency(product.fixedCalculation.totalCost)}
+                {/* ✅ CORREÇÃO 3: Usar optional chaining */}
+                {formatCurrency(product.fixedCalculation?.totalCost || 0)}
               </p>
             </div>
           )}

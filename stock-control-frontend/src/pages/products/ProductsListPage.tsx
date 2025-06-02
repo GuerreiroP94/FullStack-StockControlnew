@@ -79,13 +79,13 @@ const ProductsListPage: React.FC = () => {
       
       return {
         ...product,
-        priority: priorities[product.id] || null,
+        priority: priorities[product.id] || undefined,
         fixedCalculation: calculation ? {
           id: calculation.id,
           calculatedAt: calculation.calculatedAt,
           totalCost: calculation.totalCost,
           componentsSnapshot: calculation.componentsSnapshot
-        } : null,
+        } : undefined,
         calculationHistory: calculation?.calculationHistory || []
       };
     });
