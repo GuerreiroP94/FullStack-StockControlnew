@@ -15,7 +15,9 @@ import {
   Settings,
   LogOut,
   User,
-  Wrench
+  Wrench,
+  Search,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -52,8 +54,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
       submenu: [
         {
           path: '/components',
-          name: 'Lista de Componentes',
-          icon: Cpu
+          name: 'Consultar Componentes',
+          icon: Search
+        },
+        {
+          path: '/components/manage',
+          name: 'Gerenciar Componentes',
+          icon: FileSpreadsheet
         },
         {
           path: '/components/maintenance',

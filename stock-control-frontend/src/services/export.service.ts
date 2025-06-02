@@ -22,6 +22,21 @@ interface ProductionReportDto {
   }>;
 }
 
+// Interface para o plano de produção
+interface ProductionPlanRow {
+  qtdFabricar: number;
+  qtdTotal: number;
+  device: string;
+  value: string;
+  package: string;
+  caracteristicas: string;
+  codigo: string;
+  gaveta: string;
+  divisao: string;
+  qtdEstoque: number;
+  qtdCompra: number;
+}
+
 class ExportService {
   /**
    * Exporta componentes para arquivo CSV
@@ -294,6 +309,85 @@ class ExportService {
     const url = URL.createObjectURL(blob);
     
     const filename = `relatorio_producao_${productName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  /**
+   * Exporta plano de produção para arquivo CSV
+   * @param data Array com os dados do plano de produção
+   */
+  exportProductionPlan(data: ProductionPlanRow[]) {
+    // Cabeçalhos das colunas alinhados com o modelo da imagem
+    const headers = [
+      'QTD FABRICAR',
+      'Qtd. Total',
+      'Device',
+      'Value',
+      'Package',
+      'Características',
+      'Cód.',
+      'Gaveta',
+      'Divisão',
+      'Qtd. Estoque',
+      'Qtd. Compra'
+    ];
+
+    // Converter dados para linhas CSV
+    const rows = data.map(row => [
+      row.qtdFabricar,
+      row.qtdTotal,
+      row.device,
+      row.value,
+      row.package,
+      row.caracteristicas,
+      row.codigo,
+      row.gaveta,
+      row.divisao,
+      row.qtdEstoque,
+      row.qtdCompra
+    ]);
+
+    // Adicionar linha vazia no final para indicar componentes com compra necessária
+    const rowsNeedingPurchase = data.filter(row => row.qtdCompra > 0);
+    if (rowsNeedingPurchase.length > 0) {
+      rows.push(['', '', '', '', '', '', '', '', '', '', '']);
+      rows.push(['COMPONENTES QUE PRECISAM SER COMPRADOS:', '', '', '', '', '', '', '', '', '', '']);
+      rowsNeedingPurchase.forEach(row => {
+        rows.push([
+          '',
+          '',
+          row.device,
+          row.value,
+          row.package,
+          row.caracteristicas,
+          row.codigo,
+          row.gaveta,
+          row.divisao,
+          row.qtdEstoque,
+          row.qtdCompra
+        ]);
+      });
+    }
+
+    // Criar conteúdo CSV
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    // Criar blob e fazer download
+    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    const filename = `plano_producao_${new Date().toISOString().split('T')[0]}.csv`;
     
     link.setAttribute('href', url);
     link.setAttribute('download', filename);

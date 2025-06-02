@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   Plus, 
   Search, 
@@ -7,30 +7,26 @@ import {
   Pencil, 
   Trash2, 
   Cpu,
-  AlertCircle,
-  Package,
   FileSpreadsheet,
   X,
   Save,
   CheckSquare,
   Square,
-  ShoppingBag,
-  Upload,
-  Check
+  Package
 } from 'lucide-react';
 import componentsService from '../../services/components.service';
 import exportService from '../../services/export.service';
 import { Component, ComponentFilter, ComponentStockEntry } from '../../types';
-import { COMPONENT_GROUPS, PAGINATION } from '../../utils/constants';
-import { getStockStatus, getStockStatusColor } from '../../utils/helpers';
+import { COMPONENT_GROUPS } from '../../utils/constants';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
 import movementsService from '../../services/movements.service';
 
-const ComponentsListPage: React.FC = () => {
+const ComponentsManagePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [components, setComponents] = useState<Component[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,10 +39,15 @@ const ComponentsListPage: React.FC = () => {
   const [stockEntries, setStockEntries] = useState<Map<number, ComponentStockEntry>>(new Map());
   const [editedComponents, setEditedComponents] = useState<Map<number, Component>>(new Map());
   
-  // Estado de importação
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [importFile, setImportFile] = useState<File | null>(null);
-  const [importing, setImporting] = useState(false);
+  // Estados removidos: importação não é mais necessária
+  
+  // Estados para exportação personalizada
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set([
+    'id', 'name', 'characteristics', 'package', 'createdAt',
+    'price', 'quantityInStock', 'minimumQuantity', 'environment',
+    'drawer', 'division', 'ncm', 'nve'
+  ]));
   
   // Dropdowns de grupos
   const [groups, setGroups] = useState<string[]>(COMPONENT_GROUPS);
@@ -55,12 +56,7 @@ const ComponentsListPage: React.FC = () => {
   const [values, setValues] = useState<string[]>([]);
   
   // Filtros
-  const [filters, setFilters] = useState<ComponentFilter & {
-    device?: string;
-    package?: string;
-    value?: string;
-    searchTerm?: string;
-  }>({
+  const [filters, setFilters] = useState<ComponentFilter>({
     name: '',
     group: '',
     device: '',
@@ -68,24 +64,44 @@ const ComponentsListPage: React.FC = () => {
     value: '',
     searchTerm: '',
     pageNumber: 1,
-    pageSize: PAGINATION.DEFAULT_PAGE_SIZE
+    pageSize: 100
   });
 
-  // Estado para controlar se deve fazer a busca
-  const [shouldSearch, setShouldSearch] = useState(true);
+  // Busca em tempo real
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
 
   useEffect(() => {
-    if (shouldSearch) {
-      fetchComponents();
-      setShouldSearch(false);
+    // Verificar se vieram componentes pré-selecionados da página de consulta
+    const state = location.state as { selectedComponents?: number[] };
+    if (state?.selectedComponents) {
+      setSelectedComponents(new Set(state.selectedComponents));
+      setIsEditMode(true);
     }
-  }, [shouldSearch, filters]);
+    
+    fetchComponents();
+  }, [filters.group, filters.device, filters.package, filters.value]);
+
+  useEffect(() => {
+    // Filtrar componentes localmente quando o usuário digitar
+    if (searchTerm) {
+      const filtered = components.filter(comp => 
+        Object.values(comp).some(value => 
+          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      );
+      setFilteredComponents(filtered);
+    } else {
+      setFilteredComponents(components);
+    }
+  }, [searchTerm, components]);
 
   const fetchComponents = async () => {
     try {
       setLoading(true);
       const data = await componentsService.getAll(filters);
       setComponents(data);
+      setFilteredComponents(data);
       
       // Extrair valores únicos para os dropdowns
       const uniqueGroups = Array.from(new Set(data.map(c => c.group).filter(Boolean)));
@@ -93,7 +109,6 @@ const ComponentsListPage: React.FC = () => {
       const uniquePackages = Array.from(new Set(data.map(c => c.package).filter(Boolean)));
       const uniqueValues = Array.from(new Set(data.map(c => c.value).filter(Boolean)));
 
-      // Atualizar os dropdowns com valores únicos, mantendo os valores padrão
       if (uniqueGroups.length > 0) {
         setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
       }
@@ -114,15 +129,11 @@ const ComponentsListPage: React.FC = () => {
     }
   };
 
-  const handleSearch = () => {
-    setShouldSearch(true);
-  };
-
   const handleSelectAll = () => {
-    if (selectedComponents.size === components.length) {
+    if (selectedComponents.size === filteredComponents.length) {
       setSelectedComponents(new Set());
     } else {
-      setSelectedComponents(new Set(components.map(c => c.id)));
+      setSelectedComponents(new Set(filteredComponents.map(c => c.id)));
     }
   };
 
@@ -209,8 +220,8 @@ const ComponentsListPage: React.FC = () => {
         if (!hasChanges && !hasStockMovement) continue;
 
         // Validações
-        if (!editedComponent.group || !editedComponent.device || !editedComponent.value || !editedComponent.package) {
-          setError('Grupo, Device, Value e Package são obrigatórios');
+        if (!editedComponent.name) {
+          setError('Nome é obrigatório');
           return;
         }
 
@@ -275,7 +286,7 @@ const ComponentsListPage: React.FC = () => {
 
   const handleDeleteClick = () => {
     if (selectedComponents.size === 0) {
-      setError('Selecione ao menos um componente para seguir com a ação');
+      setError('Selecione ao menos um componente para deletar');
       return;
     }
     setDeleteModal({ show: true, components: components.filter(c => selectedComponents.has(c.id)) });
@@ -297,49 +308,55 @@ const ComponentsListPage: React.FC = () => {
 
   const handleExportClick = () => {
     if (selectedComponents.size === 0) {
-      setError('Selecione ao menos um componente para seguir com a ação');
+      setError('Selecione ao menos um componente para exportar');
       return;
     }
-    
-    const selectedData = components.filter(c => selectedComponents.has(c.id));
-    exportService.exportComponentsToExcel(selectedData, `componentes_${new Date().toISOString().split('T')[0]}.csv`);
-    setSuccess(`${selectedData.length} componentes exportados com sucesso!`);
+    setShowExportModal(true);
   };
 
-  const handleCreateProductClick = () => {
-    if (selectedComponents.size === 0) {
-      setError('Selecione ao menos um componente para seguir com a ação');
-      return;
-    }
+  const handleExport = () => {
+    const selectedData = filteredComponents.filter(c => selectedComponents.has(c.id));
     
-    const selectedData = components.filter(c => selectedComponents.has(c.id));
-    navigate('/products/new', { state: { selectedComponents: selectedData } });
-  };
-
-  const handleImportFile = async () => {
-    if (!importFile) {
-      setError('Selecione um arquivo para importar');
-      return;
-    }
-
-    try {
-      setImporting(true);
-      const result = await componentsService.bulkImport(importFile);
+    // Filtrar apenas as colunas selecionadas
+    const columnsArray = Array.from(selectedColumns);
+    const filteredData = selectedData.map(comp => {
+      const filtered: any = { id: comp.id };
       
-      setSuccess(`Importação concluída: ${result.successCount} importados, ${result.errorCount} erros`);
-      setShowImportModal(false);
-      setImportFile(null);
-      fetchComponents();
-    } catch (error: any) {
-      setError(`Erro ao importar arquivo: ${error.message}`);
-    } finally {
-      setImporting(false);
-    }
+      columnsArray.forEach(col => {
+        if (col in comp) {
+          filtered[col] = comp[col as keyof Component];
+        }
+      });
+      
+      return filtered;
+    });
+    
+    exportService.exportComponentsToExcel(filteredData as Component[], 
+      `componentes_${new Date().toISOString().split('T')[0]}.csv`
+    );
+    
+    setSuccess(`${selectedData.length} componentes exportados com sucesso!`);
+    setShowExportModal(false);
   };
 
-  const handleDownloadTemplate = () => {
-    exportService.downloadImportTemplate();
-  };
+  const columnOptions = [
+    { id: 'id', label: 'Id' },
+    { id: 'name', label: 'Nome' },
+    { id: 'characteristics', label: 'Característica' },
+    { id: 'package', label: 'Package' },
+    { id: 'createdAt', label: 'Data' },
+    { id: 'price', label: 'Preço' },
+    { id: 'quantityInStock', label: 'Quantidade em Estoque' },
+    { id: 'minimumQuantity', label: 'QT MIN' },
+    { id: 'environment', label: 'Ambiente' },
+    { id: 'drawer', label: 'Gaveta' },
+    { id: 'division', label: 'Divisão' },
+    { id: 'ncm', label: 'NCM' },
+    { id: 'nve', label: 'NVE' },
+    { id: 'group', label: 'Grupo' },
+    { id: 'device', label: 'Device' },
+    { id: 'value', label: 'Value' }
+  ];
 
   return (
     <div className="p-6">
@@ -351,8 +368,8 @@ const ComponentsListPage: React.FC = () => {
               <Cpu className="text-white" size={20} />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">Componentes</h1>
-              <p className="text-sm text-gray-500">Gerencie os componentes do estoque</p>
+              <h1 className="text-2xl font-bold text-gray-800">Gerenciar Componentes</h1>
+              <p className="text-sm text-gray-500">Cadastre, edite e gerencie componentes do estoque</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -362,26 +379,6 @@ const ComponentsListPage: React.FC = () => {
             >
               <Plus size={18} />
               <span className="font-medium">Novo Componente</span>
-            </button>
-            
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all duration-200 shadow-sm"
-            >
-              <Upload size={18} />
-              <span className="font-medium">Importar</span>
-            </button>
-            
-            <button
-              onClick={handleCreateProductClick}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                selectedComponents.size > 0
-                  ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-            >
-              <ShoppingBag size={18} />
-              <span className="font-medium">Criar Produto</span>
             </button>
             
             <button
@@ -403,6 +400,7 @@ const ComponentsListPage: React.FC = () => {
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
+              disabled={selectedComponents.size === 0}
             >
               <Trash2 size={18} />
               <span className="font-medium">Deletar</span>
@@ -415,6 +413,7 @@ const ComponentsListPage: React.FC = () => {
                   ? 'bg-purple-600 text-white hover:bg-purple-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
+              disabled={selectedComponents.size === 0}
             >
               <FileSpreadsheet size={18} />
               <span className="font-medium">Exportar</span>
@@ -427,6 +426,7 @@ const ComponentsListPage: React.FC = () => {
                   ? 'bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
+              disabled={!isEditMode}
             >
               <Save size={18} />
               <span className="font-medium">Salvar Alterações</span>
@@ -513,54 +513,15 @@ const ComponentsListPage: React.FC = () => {
           </select>
 
           {/* Search */}
-          <div className="flex gap-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
               placeholder="Buscar em todas as colunas..."
-              value={filters.searchTerm}
-              onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
             />
-            <button
-              onClick={handleSearch}
-              className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200"
-            >
-              <Search size={18} />
-            </button>
-          </div>
-        </div>
-
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between mt-4">
-          <select
-            value={filters.pageSize}
-            onChange={(e) => setFilters(prev => ({ ...prev, pageSize: Number(e.target.value), pageNumber: 1 }))}
-            className="px-4 py-2 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            {PAGINATION.PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size}>{size} por página</option>
-            ))}
-          </select>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, pageNumber: Math.max(1, prev.pageNumber - 1) }))}
-              disabled={filters.pageNumber === 1}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Anterior
-            </button>
-            <span className="px-4 py-1.5 text-sm text-gray-600">
-              Página {filters.pageNumber}
-            </span>
-            <button
-              onClick={() => setFilters(prev => ({ ...prev, pageNumber: prev.pageNumber + 1 }))}
-              disabled={components.length < filters.pageSize}
-              className="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Próxima
-            </button>
           </div>
         </div>
       </div>
@@ -568,22 +529,29 @@ const ComponentsListPage: React.FC = () => {
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         {isEditMode && (
-          <div className="bg-orange-50 border-b border-orange-200 p-3 text-center">
-            <p className="text-sm text-orange-800 font-medium">
-              📝 Modo de Edição Ativo - Todos os componentes podem ser editados
-            </p>
-          </div>
+          <>
+            <div className="bg-orange-50 border-b border-orange-200 p-3 text-center">
+              <p className="text-sm text-orange-800 font-medium">
+                📝 Modo de Edição Ativo - Todos os componentes podem ser editados
+              </p>
+            </div>
+            <div className="p-4 bg-blue-50 border-b border-blue-200">
+              <p className="text-sm text-blue-800 mb-2">
+                <strong>Nota:</strong> Para editar Grupo, Device e Value dos componentes, use a edição individual clicando no botão editar da página de consulta.
+              </p>
+            </div>
+          </>
         )}
         {loading ? (
           <div className="p-12 text-center">
             <LoadingSpinner size="lg" message="Carregando componentes..." />
           </div>
-        ) : components.length === 0 ? (
+        ) : filteredComponents.length === 0 ? (
           <div className="p-12 text-center">
             <Package className="mx-auto mb-4 text-gray-400" size={48} />
             <p className="text-lg font-medium text-gray-600">Nenhum componente encontrado</p>
             <p className="text-sm text-gray-500 mt-1">
-              {filters.searchTerm || filters.group || filters.device || filters.package || filters.value
+              {searchTerm || filters.group || filters.device || filters.package || filters.value
                 ? "Tente ajustar os filtros de busca" 
                 : "Adicione novos componentes ao sistema"}
             </p>
@@ -598,29 +566,38 @@ const ComponentsListPage: React.FC = () => {
                       onClick={handleSelectAll}
                       className="text-gray-600 hover:text-gray-800"
                     >
-                      {selectedComponents.size === components.length ? 
+                      {selectedComponents.size === filteredComponents.length ? 
                         <CheckSquare size={20} /> : 
                         <Square size={20} />
                       }
                     </button>
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grupo
+                    Id
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Device
+                    Nome
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Value
+                    Característica
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Package
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Características
+                    Data
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Código Interno
+                    Preço
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Quantidade em Estoque
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    QT MIN
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Ambiente
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Gaveta
@@ -629,39 +606,21 @@ const ComponentsListPage: React.FC = () => {
                     Divisão
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Quantidade em Estoque
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Data de Entrada
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Preço
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Entrada
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Saída
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NCM
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NVE
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ambiente
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
+                  {/* Hidden columns for functionality but not displayed */}
+                  <th className="hidden">Grupo</th>
+                  <th className="hidden">Device</th>
+                  <th className="hidden">Value</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {components.map((component) => {
-                  const status = getStockStatus(component.quantityInStock, component.minimumQuantity);
+                {filteredComponents.map((component) => {
                   const isSelected = selectedComponents.has(component.id);
-                  const isBeingEdited = isEditMode; // Todos os componentes são editáveis em modo de edição
+                  const isBeingEdited = isEditMode;
                   const componentData = isBeingEdited && editedComponents.has(component.id) 
                     ? editedComponents.get(component.id)! 
                     : component;
@@ -687,51 +646,18 @@ const ComponentsListPage: React.FC = () => {
                         </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {isBeingEdited ? (
-                          <input
-                            type="text"
-                            value={componentData.group}
-                            onChange={(e) => handleComponentEdit(component.id, 'group', e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                          />
-                        ) : (
-                          component.group
-                        )}
+                        {component.id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {isBeingEdited ? (
                           <input
                             type="text"
-                            value={componentData.device || ''}
-                            onChange={(e) => handleComponentEdit(component.id, 'device', e.target.value)}
+                            value={componentData.name}
+                            onChange={(e) => handleComponentEdit(component.id, 'name', e.target.value)}
                             className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                           />
                         ) : (
-                          component.device || '-'
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {isBeingEdited ? (
-                          <input
-                            type="text"
-                            value={componentData.value || ''}
-                            onChange={(e) => handleComponentEdit(component.id, 'value', e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                          />
-                        ) : (
-                          component.value || '-'
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {isBeingEdited ? (
-                          <input
-                            type="text"
-                            value={componentData.package || ''}
-                            onChange={(e) => handleComponentEdit(component.id, 'package', e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                          />
-                        ) : (
-                          component.package || '-'
+                          component.name
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -750,12 +676,72 @@ const ComponentsListPage: React.FC = () => {
                         {isBeingEdited ? (
                           <input
                             type="text"
-                            value={componentData.internalCode || ''}
-                            onChange={(e) => handleComponentEdit(component.id, 'internalCode', e.target.value)}
+                            value={componentData.package || ''}
+                            onChange={(e) => handleComponentEdit(component.id, 'package', e.target.value)}
                             className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
                           />
                         ) : (
-                          component.internalCode || '-'
+                          component.package || '-'
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {component.createdAt ? new Date(component.createdAt).toLocaleDateString('pt-BR') : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {isBeingEdited ? (
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={componentData.price || ''}
+                            onChange={(e) => handleComponentEdit(component.id, 'price', Number(e.target.value))}
+                            className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                          />
+                        ) : (
+                          component.price ? `R$ ${component.price.toFixed(2)}` : '-'
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {isBeingEdited ? (
+                          <input
+                            type="number"
+                            value={componentData.quantityInStock}
+                            onChange={(e) => handleComponentEdit(component.id, 'quantityInStock', Number(e.target.value))}
+                            className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                          />
+                        ) : (
+                          <p className="text-sm font-medium text-gray-900">{component.quantityInStock}</p>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {isBeingEdited ? (
+                          <input
+                            type="number"
+                            value={componentData.minimumQuantity}
+                            onChange={(e) => handleComponentEdit(component.id, 'minimumQuantity', Number(e.target.value))}
+                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                          />
+                        ) : (
+                          component.minimumQuantity
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {isBeingEdited ? (
+                          <select
+                            value={componentData.environment || 'estoque'}
+                            onChange={(e) => handleComponentEdit(component.id, 'environment', e.target.value as 'estoque' | 'laboratorio')}
+                            className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200 bg-white"
+                          >
+                            <option value="estoque">Estoque</option>
+                            <option value="laboratorio">Laboratório</option>
+                          </select>
+                        ) : (
+                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
+                            component.environment === 'laboratorio' 
+                              ? 'bg-purple-100 text-purple-800' 
+                              : 'bg-green-100 text-green-800'
+                          }`}>
+                            {component.environment === 'laboratorio' ? 'Laboratório' : 'Estoque'}
+                          </span>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -782,59 +768,6 @@ const ComponentsListPage: React.FC = () => {
                           component.division || '-'
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isBeingEdited ? (
-                          <input
-                            type="number"
-                            value={componentData.quantityInStock}
-                            onChange={(e) => handleComponentEdit(component.id, 'quantityInStock', Number(e.target.value))}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                          />
-                        ) : (
-                          <p className="text-sm font-medium text-gray-900">{component.quantityInStock}</p>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {component.createdAt ? new Date(component.createdAt).toLocaleDateString('pt-BR') : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {isBeingEdited ? (
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={componentData.price || ''}
-                            onChange={(e) => handleComponentEdit(component.id, 'price', Number(e.target.value))}
-                            className="w-24 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                          />
-                        ) : (
-                          component.price ? `R$ ${component.price.toFixed(2)}` : '-'
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isBeingEdited ? (
-                          <input
-                            type="number"
-                            min="0"
-                            value={stockEntries.get(component.id)?.entryQuantity || ''}
-                            onChange={(e) => handleStockEntry(component.id, 'entry', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                            placeholder="0"
-                          />
-                        ) : '-'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isBeingEdited ? (
-                          <input
-                            type="number"
-                            min="0"
-                            max={componentData.quantityInStock}
-                            value={stockEntries.get(component.id)?.exitQuantity || ''}
-                            onChange={(e) => handleStockEntry(component.id, 'exit', e.target.value)}
-                            className="w-20 px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
-                            placeholder="0"
-                          />
-                        ) : '-'}
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {isBeingEdited ? (
                           <input
@@ -859,31 +792,15 @@ const ComponentsListPage: React.FC = () => {
                           component.nve || '-'
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {isBeingEdited ? (
-                          <select
-                            value={componentData.environment || 'estoque'}
-                            onChange={(e) => handleComponentEdit(component.id, 'environment', e.target.value as 'estoque' | 'laboratorio')}
-                            className="w-full px-2 py-1 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-1 focus:ring-blue-200 bg-white"
-                          >
-                            <option value="estoque">Estoque</option>
-                            <option value="laboratorio">Laboratório</option>
-                          </select>
-                        ) : (
-                          <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-md ${
-                            component.environment === 'laboratorio' 
-                              ? 'bg-purple-100 text-purple-800' 
-                              : 'bg-green-100 text-green-800'
-                          }`}>
-                            {component.environment === 'laboratorio' ? 'Laboratório' : 'Estoque'}
-                          </span>
+                      {/* Hidden fields for functionality */}
+                      <td className="hidden">
+                        {isBeingEdited && (
+                          <>
+                            <input type="hidden" value={componentData.group} />
+                            <input type="hidden" value={componentData.device || ''} />
+                            <input type="hidden" value={componentData.value || ''} />
+                          </>
                         )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getStockStatusColor(status)}`}>
-                          {status === 'critical' && <AlertCircle size={12} />}
-                          {status === 'critical' ? 'Crítico' : status === 'low' ? 'Baixo' : 'Normal'}
-                        </span>
                       </td>
                     </tr>
                   );
@@ -905,61 +822,49 @@ const ComponentsListPage: React.FC = () => {
         type="danger"
       />
 
-      {/* Modal de Importação */}
-      {showImportModal && (
+      {/* Modal de Exportação */}
+      {showExportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Importar Componentes</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              Selecione as colunas para exportar
+            </h3>
             
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 mb-3">
-                Faça upload de um arquivo CSV com os componentes para importar.
-              </p>
-              
-              <button
-                onClick={handleDownloadTemplate}
-                className="text-blue-600 hover:text-blue-700 text-sm underline mb-4"
-              >
-                Baixar template de importação
-              </button>
-              
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                  className="hidden"
-                  id="import-file"
-                />
-                <label
-                  htmlFor="import-file"
-                  className="cursor-pointer"
-                >
-                  <Upload className="mx-auto mb-3 text-gray-400" size={40} />
-                  <p className="text-sm text-gray-600">
-                    {importFile ? importFile.name : 'Clique para selecionar arquivo CSV'}
-                  </p>
+            <div className="mb-4 max-h-60 overflow-y-auto">
+              {columnOptions.map(col => (
+                <label key={col.id} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded">
+                  <input
+                    type="checkbox"
+                    checked={selectedColumns.has(col.id)}
+                    onChange={(e) => {
+                      const newSelected = new Set(selectedColumns);
+                      if (e.target.checked) {
+                        newSelected.add(col.id);
+                      } else {
+                        newSelected.delete(col.id);
+                      }
+                      setSelectedColumns(newSelected);
+                    }}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">{col.label}</span>
                 </label>
-              </div>
+              ))}
             </div>
             
             <div className="flex justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowImportModal(false);
-                  setImportFile(null);
-                }}
+                onClick={() => setShowExportModal(false)}
                 className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
               >
                 Cancelar
               </button>
               <button
-                onClick={handleImportFile}
-                disabled={!importFile || importing}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                onClick={handleExport}
+                disabled={selectedColumns.size === 0}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {importing && <LoadingSpinner size="sm" />}
-                Importar
+                Exportar
               </button>
             </div>
           </div>
@@ -969,4 +874,4 @@ const ComponentsListPage: React.FC = () => {
   );
 };
 
-export default ComponentsListPage;
+export default ComponentsManagePage;

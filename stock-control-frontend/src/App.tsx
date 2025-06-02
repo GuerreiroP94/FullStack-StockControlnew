@@ -8,7 +8,8 @@ import Layout from './components/common/Layout';
 import LoginPage from './pages/auth/LoginPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
-import ComponentsListPage from './pages/components/ComponentsListPage';
+import ComponentsConsultPage from './pages/components/ComponentsConsultPage';
+import ComponentsManagePage from './pages/components/ComponentsManagePage';
 import ComponentFormPage from './pages/components/ComponentFormPage';
 import GroupsMaintenancePage from './pages/components/GroupsMaintenancePage';
 import ProductsListPage from './pages/products/ProductsListPage';
@@ -34,7 +35,8 @@ function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               
               {/* Components */}
-              <Route path="/components" element={<ComponentsListPage />} />
+              <Route path="/components" element={<ComponentsConsultPage />} />
+              <Route path="/components/manage" element={<ComponentsManagePage />} />
               <Route path="/components/new" element={<ComponentFormPage />} />
               <Route path="/components/:id/edit" element={<ComponentFormPage />} />
               <Route path="/components/maintenance" element={<GroupsMaintenancePage />} />
