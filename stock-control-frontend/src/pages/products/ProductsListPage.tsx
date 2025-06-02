@@ -18,7 +18,9 @@ import {
   ArrowUp,
   ArrowDown,
   History,
-  RefreshCw
+  RefreshCw,
+  ArrowRight,
+  X  // Adicionado import do X
 } from 'lucide-react';
 import productsService from '../../services/products.service';
 import componentsService from '../../services/components.service';
@@ -193,16 +195,21 @@ const ProductsListPage: React.FC = () => {
     if (addToHistory && calculations[productId]) {
       const history = calculations[productId].calculationHistory || [];
       history.push({
-        ...calculations[productId],
         id: calculations[productId].id,
         calculatedAt: calculations[productId].calculatedAt,
         totalCost: calculations[productId].totalCost,
         componentsSnapshot: calculations[productId].componentsSnapshot
       });
-      calculation.calculationHistory = history;
+      // Salvando o histórico no objeto de cálculos
+      calculations[productId].calculationHistory = history;
     }
     
-    calculations[productId] = calculation;
+    // Atualizando o cálculo atual
+    calculations[productId] = {
+      ...calculation,
+      calculationHistory: calculations[productId]?.calculationHistory || []
+    };
+    
     localStorage.setItem('productCalculations', JSON.stringify(calculations));
   };
 
@@ -223,18 +230,8 @@ const ProductsListPage: React.FC = () => {
       // Salvar novo cálculo com histórico
       saveProductCalculation(product.id, newCalculation, true);
       
-      // Atualizar estado local
-      setProducts(prevProducts => 
-        prevProducts.map(p => 
-          p.id === product.id 
-            ? { 
-                ...p, 
-                fixedCalculation: newCalculation,
-                calculationHistory: [...(p.calculationHistory || []), p.fixedCalculation].filter(Boolean) as ProductCalculation[]
-              }
-            : p
-        )
-      );
+      // Recarregar dados para atualizar o estado
+      await fetchProducts();
 
       setSuccess('Valor do produto recalculado com sucesso!');
     } catch (error) {
@@ -698,8 +695,5 @@ const ProductsListPage: React.FC = () => {
     </div>
   );
 };
-
-// Import para resolver o erro de ArrowRight
-import { ArrowRight } from 'lucide-react';
 
 export default ProductsListPage;

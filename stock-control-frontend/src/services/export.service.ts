@@ -105,7 +105,7 @@ class ExportService {
     // Calcular total geral
     const totalGeral = components.reduce((sum, comp) => sum + (comp.totalPrice || 0), 0);
 
-    // Adicionar linha de total
+    // Adicionar linha de total com valores vazios ou numéricos apropriados
     data.push({
       'Código Interno': '',
       'Componente': '',
@@ -115,11 +115,11 @@ class ExportService {
       'Características': '',
       'Gaveta': '',
       'Divisão': '',
-      'Qtd/Unidade': 'TOTAL:',
-      'Qtd Total': '',
-      'Em Estoque': '',
-      'Comprar': '',
-      'Preço Unit.': '',
+      'Qtd/Unidade': 0,
+      'Qtd Total': 0,
+      'Em Estoque': 0,
+      'Comprar': 0,
+      'Preço Unit.': 0,
       'Preço Total': totalGeral
     });
 
@@ -321,6 +321,14 @@ class ExportService {
 
       reader.readAsArrayBuffer(file);
     });
+  }
+
+  /**
+   * Exporta componentes para arquivo CSV (mantido para compatibilidade)
+   */
+  exportComponentsToCSV(components: Component[], filename: string = 'componentes.csv') {
+    // Usar a função Excel por padrão
+    this.exportComponentsToExcel(components, filename.replace('.csv', '.xlsx'));
   }
 }
 
