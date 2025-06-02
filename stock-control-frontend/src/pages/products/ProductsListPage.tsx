@@ -14,25 +14,22 @@ import {
   Calculator,
   DollarSign,
   AlertCircle,
-  Check,
-  X,
   GripVertical,
-  Eye,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+  History,
+  RefreshCw
 } from 'lucide-react';
 import productsService from '../../services/products.service';
 import componentsService from '../../services/components.service';
 import exportService from '../../services/export.service';
 import { Product, ProductQueryParameters, Component, ProductWithPriority, ProductCalculation, ProductionPlanRow } from '../../types';
 import { PAGINATION } from '../../utils/constants';
-import { formatDate, formatCurrency } from '../../utils/helpers';
+import { formatDate, formatCurrency, formatDateTime } from '../../utils/helpers';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ConfirmModal from '../../components/common/ConfirmModal';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
-import ProductPreview from '../products/ProductPreview';
-
 
 const ProductsListPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,12 +40,13 @@ const ProductsListPage: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; product?: Product }>({ show: false });
   
-  // Estados para funcionalidades novas
+  // Estados para funcionalidades
   const [expandedProductId, setExpandedProductId] = useState<number | null>(null);
   const [isPriorityMode, setIsPriorityMode] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [recalculatingProduct, setRecalculatingProduct] = useState<number | null>(null);
   const [exportQuantities, setExportQuantities] = useState<Map<number, number>>(new Map());
+  const [productOrder, setProductOrder] = useState<number[]>([]);
   
   // Filters
   const [queryParams, setQueryParams] = useState<ProductQueryParameters>({
@@ -63,41 +61,50 @@ const ProductsListPage: React.FC = () => {
   }, [queryParams]);
 
   const fetchProducts = async () => {
-  try {
-    setLoading(true);
-    const data = await productsService.getAll(queryParams);
-    
-    // Carregar dados adicionais salvos no localStorage
-    const savedPriorities = localStorage.getItem('productPriorities');
-    const savedCalculations = localStorage.getItem('productCalculations');
-    
-    const priorities = savedPriorities ? JSON.parse(savedPriorities) : {};
-    const calculations = savedCalculations ? JSON.parse(savedCalculations) : {};
-    
-    const enhancedProducts: ProductWithPriority[] = data.map(product => {
-      const calculation = calculations[product.id];
+    try {
+      setLoading(true);
+      const data = await productsService.getAll(queryParams);
       
-      return {
-        ...product,
-        priority: priorities[product.id] || undefined,
-        fixedCalculation: calculation ? {
-          id: calculation.id,
-          calculatedAt: calculation.calculatedAt,
-          totalCost: calculation.totalCost,
-          componentsSnapshot: calculation.componentsSnapshot
-        } : undefined,
-        calculationHistory: calculation?.calculationHistory || []
-      };
-    });
-    
-    setProducts(enhancedProducts);
-  } catch (error) {
-    setError('Erro ao carregar produtos');
-    console.error(error);
-  } finally {
-    setLoading(false);
-  }
-};
+      // Carregar dados adicionais salvos no localStorage
+      const savedCalculations = localStorage.getItem('productCalculations');
+      const calculations = savedCalculations ? JSON.parse(savedCalculations) : {};
+      
+      const enhancedProducts: ProductWithPriority[] = data.map(product => {
+        const calculation = calculations[product.id];
+        
+        return {
+          ...product,
+          fixedCalculation: calculation ? {
+            id: calculation.id,
+            calculatedAt: calculation.calculatedAt,
+            totalCost: calculation.totalCost,
+            componentsSnapshot: calculation.componentsSnapshot
+          } : undefined,
+          calculationHistory: calculation?.calculationHistory || []
+        };
+      });
+      
+      setProducts(enhancedProducts);
+      
+      // Definir ordem inicial dos produtos
+      setProductOrder(enhancedProducts.map(p => p.id));
+      
+      // Se algum produto não tem cálculo inicial, calcular automaticamente
+      enhancedProducts.forEach(product => {
+        if (!product.fixedCalculation && product.components.length > 0) {
+          // Calcular e salvar automaticamente o valor inicial
+          const initialCalc = calculateProduction(product);
+          saveProductCalculation(product.id, initialCalc, false);
+        }
+      });
+      
+    } catch (error) {
+      setError('Erro ao carregar produtos');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchComponents = async () => {
     try {
@@ -113,6 +120,12 @@ const ProductsListPage: React.FC = () => {
     
     try {
       await productsService.delete(deleteModal.product.id);
+      
+      // Remover cálculos salvos do produto
+      const calculations = JSON.parse(localStorage.getItem('productCalculations') || '{}');
+      delete calculations[deleteModal.product.id];
+      localStorage.setItem('productCalculations', JSON.stringify(calculations));
+      
       setSuccess('Produto excluído com sucesso!');
       fetchProducts();
       setDeleteModal({ show: false });
@@ -129,119 +142,86 @@ const ProductsListPage: React.FC = () => {
     setExpandedProductId(expandedProductId === productId ? null : productId);
   };
 
-  const moveProduct = (fromIndex: number, direction: 'up' | 'down') => {
-    const items = [...products];
-    const toIndex = direction === 'up' ? fromIndex - 1 : fromIndex + 1;
+  const moveProduct = (productId: number, direction: 'up' | 'down') => {
+    const currentIndex = productOrder.indexOf(productId);
+    if (currentIndex === -1) return;
     
-    if (toIndex < 0 || toIndex >= items.length) return;
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= productOrder.length) return;
     
-    // Trocar posições
-    [items[fromIndex], items[toIndex]] = [items[toIndex], items[fromIndex]];
-    
-    // Atualizar prioridades
-    const updatedProducts = items.map((product, index) => ({
-      ...product,
-      priority: index + 1
-    }));
-
-    setProducts(updatedProducts);
-
-    // Salvar prioridades no localStorage (temporário)
-    const priorities = updatedProducts.reduce((acc, product) => ({
-      ...acc,
-      [product.id]: product.priority
-    }), {});
-    localStorage.setItem('productPriorities', JSON.stringify(priorities));
+    const newOrder = [...productOrder];
+    [newOrder[currentIndex], newOrder[newIndex]] = [newOrder[newIndex], newOrder[currentIndex]];
+    setProductOrder(newOrder);
   };
 
   const togglePriorityMode = () => {
-    setIsPriorityMode(!isPriorityMode);
-    
-    if (!isPriorityMode && products.every(p => !p.priority)) {
-      // Se entrando no modo de prioridade e nenhum produto tem prioridade, atribuir automaticamente
-      const updatedProducts = products.map((product, index) => ({
-        ...product,
-        priority: index + 1
-      }));
-      setProducts(updatedProducts);
-      
-      const priorities = updatedProducts.reduce((acc, product) => ({
-        ...acc,
-        [product.id]: product.priority
-      }), {});
-      localStorage.setItem('productPriorities', JSON.stringify(priorities));
+    if (isPriorityMode) {
+      // Resetar ordem ao sair do modo de prioridade
+      setProductOrder(products.map(p => p.id));
     }
+    setIsPriorityMode(!isPriorityMode);
   };
 
   const calculateProduction = (product: ProductWithPriority): ProductCalculation => {
-  const componentsSnapshot = product.components.map(comp => {
-    const component = components.find(c => c.id === comp.componentId);
-    if (!component) return null;
+    const componentsSnapshot = product.components.map(comp => {
+      const component = components.find(c => c.id === comp.componentId);
+      if (!component) return null;
+
+      return {
+        componentId: comp.componentId,
+        name: comp.componentName,
+        quantity: comp.quantity,
+        unitPrice: component.price || 0,
+        totalPrice: (component.price || 0) * comp.quantity
+      };
+    }).filter((item): item is ProductCalculation['componentsSnapshot'][0] => item !== null);
+
+    const totalCost = componentsSnapshot.reduce((sum, item) => sum + item.totalPrice, 0);
 
     return {
-      componentId: comp.componentId,
-      name: comp.componentName,
-      quantity: comp.quantity,
-      unitPrice: component.price || 0,
-      totalPrice: (component.price || 0) * comp.quantity
+      id: Date.now().toString(),
+      totalCost,
+      calculatedAt: new Date().toISOString(),
+      componentsSnapshot
     };
-  }).filter((item): item is ProductCalculation['componentsSnapshot'][0] => item !== null);
-
-  const totalCost = componentsSnapshot.reduce((sum, item) => sum + item.totalPrice, 0);
-
-  return {
-    id: Date.now().toString(), // Adicione um ID único
-    totalCost,
-    calculatedAt: new Date().toISOString(),
-    componentsSnapshot
   };
-};
+
+  const saveProductCalculation = (productId: number, calculation: ProductCalculation, addToHistory: boolean = true) => {
+    const calculations = JSON.parse(localStorage.getItem('productCalculations') || '{}');
+    
+    // Se deve adicionar ao histórico e já existe um cálculo
+    if (addToHistory && calculations[productId]) {
+      const history = calculations[productId].calculationHistory || [];
+      history.push({
+        ...calculations[productId],
+        id: calculations[productId].id,
+        calculatedAt: calculations[productId].calculatedAt,
+        totalCost: calculations[productId].totalCost,
+        componentsSnapshot: calculations[productId].componentsSnapshot
+      });
+      calculation.calculationHistory = history;
+    }
+    
+    calculations[productId] = calculation;
+    localStorage.setItem('productCalculations', JSON.stringify(calculations));
+  };
 
   const handleRecalculateProduction = async (product: ProductWithPriority) => {
-  setRecalculatingProduct(product.id);
-  
-  try {
-    const newCalculation = calculateProduction(product);
+    setRecalculatingProduct(product.id);
     
-    if (product.fixedCalculation && 
-        Math.abs(newCalculation.totalCost - product.fixedCalculation.totalCost) < 0.01) {
-      setSuccess('Não houve alteração nos preços. Nada será alterado.');
-      setRecalculatingProduct(null);
-      return;
-    }
-
-    // Mostrar modal de confirmação
-    const confirmed = window.confirm(
-      `O valor da produção mudou de ${formatCurrency(product.fixedCalculation?.totalCost || 0)} ` +
-      `para ${formatCurrency(newCalculation.totalCost)}.\n\n` +
-      `Deseja confirmar o recálculo? Isso criará um novo histórico.`
-    );
-
-    if (confirmed) {
-      // Salvar novo cálculo
-      const calculations = JSON.parse(localStorage.getItem('productCalculations') || '{}');
+    try {
+      const newCalculation = calculateProduction(product);
       
-      // Estruturar o histórico corretamente
-      const productCalc = calculations[product.id] || {
-        ...newCalculation,
-        calculationHistory: []
-      };
-
-      // Se já existe um cálculo fixado, adicionar ao histórico
-      if (product.fixedCalculation) {
-        productCalc.calculationHistory = [
-          ...(productCalc.calculationHistory || []),
-          product.fixedCalculation
-        ];
+      // Se não há mudança no valor, informar
+      if (product.fixedCalculation && 
+          Math.abs(newCalculation.totalCost - product.fixedCalculation.totalCost) < 0.01) {
+        setSuccess('Os preços não foram alterados. O valor permanece o mesmo.');
+        setRecalculatingProduct(null);
+        return;
       }
 
-      // Atualizar com o novo cálculo
-      calculations[product.id] = {
-        ...newCalculation,
-        calculationHistory: productCalc.calculationHistory
-      };
-
-      localStorage.setItem('productCalculations', JSON.stringify(calculations));
+      // Salvar novo cálculo com histórico
+      saveProductCalculation(product.id, newCalculation, true);
       
       // Atualizar estado local
       setProducts(prevProducts => 
@@ -250,72 +230,118 @@ const ProductsListPage: React.FC = () => {
             ? { 
                 ...p, 
                 fixedCalculation: newCalculation,
-                calculationHistory: calculations[product.id].calculationHistory
+                calculationHistory: [...(p.calculationHistory || []), p.fixedCalculation].filter(Boolean) as ProductCalculation[]
               }
             : p
         )
       );
 
-      setSuccess('Produção recalculada com sucesso!');
+      setSuccess('Valor do produto recalculado com sucesso!');
+    } catch (error) {
+      setError('Erro ao recalcular produção');
+      console.error(error);
+    } finally {
+      setRecalculatingProduct(null);
     }
-  } catch (error) {
-    setError('Erro ao recalcular produção');
-    console.error(error);
-  } finally {
-    setRecalculatingProduct(null);
-  }
-};
+  };
 
   const handleExportToExcel = () => {
-    const productsToExport = products
-      .filter(p => p.priority)
-      .sort((a, b) => (a.priority || 0) - (b.priority || 0));
-
-    if (productsToExport.length === 0) {
-      setError('Defina a ordem de prioridade de pelo menos um produto antes de exportar.');
+    if (products.length === 0) {
+      setError('Não há produtos para exportar.');
       return;
     }
 
+    // Resetar quantidades e usar ordem padrão
+    const resetQuantities = new Map<number, number>();
+    productOrder.forEach(productId => {
+      resetQuantities.set(productId, 1);
+    });
+    setExportQuantities(resetQuantities);
+    
     setShowExportModal(true);
   };
 
- const confirmExport = () => {
-  const productsToExport = products
-    .filter(p => p.priority)
-    .sort((a, b) => (a.priority || 0) - (b.priority || 0));
+  const confirmExport = () => {
+    const orderedProducts = productOrder
+      .map(id => products.find(p => p.id === id))
+      .filter((p): p is ProductWithPriority => p !== undefined);
 
-  const exportData: ProductionPlanRow[] = productsToExport.flatMap(product => {
-    const quantity = exportQuantities.get(product.id) || 1;
+    const exportData: ProductionPlanRow[] = orderedProducts.flatMap(product => {
+      const quantity = exportQuantities.get(product.id) || 1;
+      
+      return product.components.map(comp => {
+        const component = components.find(c => c.id === comp.componentId);
+        if (!component) return null;
+
+        const totalNeeded = comp.quantity * quantity;
+        const toBuy = Math.max(0, totalNeeded - component.quantityInStock);
+
+        return {
+          qtdFabricar: quantity,
+          qtdTotal: comp.quantity,
+          device: component.device || '',
+          value: component.value || '',
+          package: component.package || '',
+          caracteristicas: component.characteristics || '',
+          codigo: component.internalCode || '',
+          gaveta: component.drawer || '',
+          divisao: component.division || '',
+          qtdEstoque: component.quantityInStock,
+          qtdCompra: toBuy
+        };
+      }).filter((item): item is ProductionPlanRow => item !== null);
+    });
+
+    exportService.exportProductionPlan(exportData);
+    setShowExportModal(false);
+    setSuccess('Planilha de produção exportada com sucesso!');
+  };
+
+  const getProductStatus = (product: ProductWithPriority) => {
+    if (!product.fixedCalculation) return 'no-calc';
     
-    return product.components.map(comp => {
-      const component = components.find(c => c.id === comp.componentId);
-      if (!component) return null;
+    const currentCalc = calculateProduction(product);
+    const difference = currentCalc.totalCost - product.fixedCalculation.totalCost;
+    
+    if (Math.abs(difference) < 0.01) return 'updated';
+    if (difference > 0) return 'increased';
+    return 'decreased';
+  };
 
-      const totalNeeded = comp.quantity * quantity;
-      const toBuy = Math.max(0, totalNeeded - component.quantityInStock);
+  const renderProductHistory = (product: ProductWithPriority) => {
+    const history = product.calculationHistory || [];
+    if (history.length === 0) return null;
 
-      return {
-        qtdFabricar: quantity,
-        qtdTotal: comp.quantity,
-        device: component.device || '',
-        value: component.value || '',
-        package: component.package || '',
-        caracteristicas: component.characteristics || '',
-        codigo: component.internalCode || '',
-        gaveta: component.drawer || '',
-        divisao: component.division || '',
-        qtdEstoque: component.quantityInStock,
-        qtdCompra: toBuy
-      };
-    }).filter((item): item is ProductionPlanRow => item !== null);
-  });
+    return (
+      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+        <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2 mb-3">
+          <History size={16} />
+          Histórico de Valores
+        </h4>
+        <div className="space-y-2">
+          {history.slice(-5).reverse().map((calc, index) => (
+            <div key={calc.id} className="flex items-center justify-between text-sm">
+              <span className="text-gray-600">
+                {formatDateTime(calc.calculatedAt)}
+              </span>
+              <span className="font-medium text-gray-900">
+                {formatCurrency(calc.totalCost)}
+              </span>
+            </div>
+          ))}
+          {history.length > 5 && (
+            <p className="text-xs text-gray-500 text-center">
+              ... e mais {history.length - 5} registros
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  };
 
-  exportService.exportProductionPlan(exportData);
-  setShowExportModal(false);
-  setSuccess('Planilha de produção exportada com sucesso!');
-};
-
-  const productsWithPriority = products.filter(p => p.priority).length;
+  const sortedProducts = isPriorityMode 
+    ? productOrder.map(id => products.find(p => p.id === id)).filter(Boolean) as ProductWithPriority[]
+    : products;
 
   return (
     <div className="p-6">
@@ -350,18 +376,13 @@ const ProductsListPage: React.FC = () => {
             >
               <GripVertical size={18} />
               <span className="font-medium">
-                {isPriorityMode ? 'Salvar Ordem' : 'Definir Ordem'}
+                {isPriorityMode ? 'Salvar Ordem' : 'Ordenar para Exportar'}
               </span>
             </button>
             
             <button
               onClick={handleExportToExcel}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                productsWithPriority > 0
-                  ? 'bg-purple-600 text-white hover:bg-purple-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-              disabled={productsWithPriority === 0}
+              className="flex items-center gap-2 px-4 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200"
             >
               <FileSpreadsheet size={18} />
               <span className="font-medium">Exportar Produção</span>
@@ -376,223 +397,205 @@ const ProductsListPage: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por nome..."
-              value={queryParams.name}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-            />
-          </div>
-
-          {/* Page Size */}
-          <select
-            value={queryParams.pageSize}
-            onChange={(e) => setQueryParams(prev => ({ ...prev, pageSize: Number(e.target.value), pageNumber: 1 }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            {PAGINATION.PAGE_SIZE_OPTIONS.map(size => (
-              <option key={size} value={size}>{size} por página</option>
-            ))}
-          </select>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Buscar produtos por nome..."
+            value={queryParams.name}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+          />
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* Products Grid */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {loading ? (
           <div className="p-12 text-center">
             <LoadingSpinner size="lg" message="Carregando produtos..." />
           </div>
-        ) : products.length === 0 ? (
+        ) : sortedProducts.length === 0 ? (
           <div className="p-12 text-center">
             <Package className="mx-auto mb-4 text-gray-400" size={48} />
             <p className="text-lg font-medium text-gray-600">Nenhum produto encontrado</p>
             <p className="text-sm text-gray-500 mt-1">
               {queryParams.name 
-                ? "Tente ajustar os filtros de busca" 
-                : "Adicione novos produtos ao sistema"}
+                ? "Tente ajustar sua busca" 
+                : "Crie seu primeiro produto clicando no botão acima"}
             </p>
           </div>
         ) : (
-          <table className="min-w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {isPriorityMode && (
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Ordem
-                  </th>
-                )}
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Produto
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Componentes
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Valor Fixado
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Criado em
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Criado por
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {products.map((product, index) => (
-                <React.Fragment key={product.id}>
-                  <tr className={`hover:bg-gray-50 transition-colors duration-150 ${
-                    product.priority ? 'border-l-4 border-green-500' : ''
-                  }`}>
+          <div className="divide-y divide-gray-200">
+            {sortedProducts.map((product, index) => {
+              const status = getProductStatus(product);
+              const currentCalc = calculateProduction(product);
+              const priceDiff = product.fixedCalculation 
+                ? currentCalc.totalCost - product.fixedCalculation.totalCost 
+                : 0;
+              
+              return (
+                <div key={product.id} className="p-6 hover:bg-gray-50 transition-colors">
+                  <div className="flex items-start justify-between gap-4">
+                    {/* Order Controls */}
                     {isPriorityMode && (
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="flex flex-col gap-1">
-                            <button
-                              onClick={() => moveProduct(index, 'up')}
-                              disabled={index === 0}
-                              className="p-1 hover:bg-gray-200 rounded disabled:opacity-30"
-                            >
-                              <ArrowUp size={16} />
-                            </button>
-                            <button
-                              onClick={() => moveProduct(index, 'down')}
-                              disabled={index === products.length - 1}
-                              className="p-1 hover:bg-gray-200 rounded disabled:opacity-30"
-                            >
-                              <ArrowDown size={16} />
-                            </button>
-                          </div>
-                          <span className="text-lg font-bold text-gray-700">
-                            {product.priority || '-'}
-                          </span>
-                        </div>
-                      </td>
-                    )}
-                    <td 
-                      className="px-6 py-4 whitespace-nowrap cursor-pointer"
-                      onClick={() => toggleProductExpansion(product.id)}
-                    >
                       <div className="flex items-center gap-2">
-                        <button className="text-gray-500 hover:text-gray-700">
-                          {expandedProductId === product.id ? 
-                            <ChevronUp size={18} /> : 
-                            <ChevronDown size={18} />
-                          }
-                        </button>
+                        <div className="flex flex-col gap-1">
+                          <button
+                            onClick={() => moveProduct(product.id, 'up')}
+                            disabled={index === 0}
+                            className="p-1 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ArrowUp size={14} />
+                          </button>
+                          <button
+                            onClick={() => moveProduct(product.id, 'down')}
+                            disabled={index === sortedProducts.length - 1}
+                            className="p-1 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            <ArrowDown size={14} />
+                          </button>
+                        </div>
+                        <span className="text-lg font-bold text-gray-700 w-8 text-center">
+                          {index + 1}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Product Info */}
+                    <div className="flex-1">
+                      <div className="flex items-start justify-between">
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{product.name}</p>
+                          <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
                           {product.description && (
-                            <p className="text-xs text-gray-500">{product.description}</p>
+                            <p className="text-sm text-gray-600 mt-1">{product.description}</p>
                           )}
+                          
+                          {/* Components Info */}
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {product.components.slice(0, 3).map((comp, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs bg-blue-50 text-blue-700 rounded-md"
+                              >
+                                <Cpu size={12} />
+                                {comp.componentName} x{comp.quantity}
+                              </span>
+                            ))}
+                            {product.components.length > 3 && (
+                              <span className="text-xs text-gray-500 flex items-center">
+                                +{product.components.length - 3} componentes
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Product Value */}
+                          <div className="mt-4 flex items-center gap-4">
+                            <div>
+                              <p className="text-xs text-gray-500">Valor Fixado</p>
+                              <p className="text-xl font-bold text-gray-900">
+                                {product.fixedCalculation 
+                                  ? formatCurrency(product.fixedCalculation.totalCost)
+                                  : '-'}
+                              </p>
+                            </div>
+                            
+                            {status !== 'updated' && status !== 'no-calc' && (
+                              <div className="flex items-center gap-2">
+                                <ArrowRight size={16} className="text-gray-400" />
+                                <div>
+                                  <p className="text-xs text-gray-500">Valor Atual</p>
+                                  <p className={`text-lg font-semibold ${
+                                    status === 'increased' ? 'text-red-600' : 'text-green-600'
+                                  }`}>
+                                    {formatCurrency(currentCalc.totalCost)}
+                                    <span className="text-xs ml-1">
+                                      ({priceDiff > 0 ? '+' : ''}{formatCurrency(priceDiff)})
+                                    </span>
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Meta Info */}
+                          <div className="mt-3 flex items-center gap-4 text-xs text-gray-500">
+                            <div className="flex items-center gap-1">
+                              <Calendar size={12} />
+                              Criado em {formatDate(product.createdAt)}
+                            </div>
+                            {product.createdBy && (
+                              <div>Por {product.createdBy}</div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex flex-wrap gap-1">
-                        {product.components.length === 0 ? (
-                          <span className="text-sm text-gray-500">Nenhum componente</span>
-                        ) : (
-                          product.components.slice(0, 3).map((comp, index) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md"
-                            >
-                              <Cpu size={12} />
-                              {comp.componentName} x{comp.quantity}
-                            </span>
-                          ))
-                        )}
-                        {product.components.length > 3 && (
-                          <span className="text-xs text-gray-500">
-                            +{product.components.length - 3} mais
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {product.fixedCalculation ? (
+
+                        {/* Actions */}
                         <div className="flex items-center gap-2">
-                          <DollarSign size={16} className="text-green-600" />
-                          <span className="text-sm font-medium text-gray-900">
-                            {formatCurrency(product.fixedCalculation.totalCost)}
-                          </span>
+                          {status !== 'updated' && status !== 'no-calc' && (
+                            <button
+                              onClick={() => handleRecalculateProduction(product)}
+                              disabled={recalculatingProduct === product.id}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-all duration-200"
+                              title="Recalcular valor do produto"
+                            >
+                              {recalculatingProduct === product.id ? (
+                                <LoadingSpinner size="sm" />
+                              ) : (
+                                <>
+                                  <RefreshCw size={14} />
+                                  <span className="text-sm font-medium">Atualizar Valor</span>
+                                </>
+                              )}
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => navigate(`/products/${product.id}/edit`)}
+                            className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
+                            title="Editar produto"
+                          >
+                            <Pencil size={18} />
+                          </button>
+                          
+                          <button
+                            onClick={() => setDeleteModal({ show: true, product })}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                            title="Excluir produto"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         </div>
-                      ) : (
+                      </div>
+
+                      {/* Expansion Toggle */}
+                      {product.calculationHistory && product.calculationHistory.length > 0 && (
                         <button
-                          onClick={() => handleRecalculateProduction(product)}
-                          className="text-sm text-blue-600 hover:text-blue-700"
+                          onClick={() => toggleProductExpansion(product.id)}
+                          className="mt-4 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
                         >
-                          Calcular
+                          {expandedProductId === product.id ? (
+                            <>
+                              <ChevronUp size={16} />
+                              Ocultar histórico
+                            </>
+                          ) : (
+                            <>
+                              <ChevronDown size={16} />
+                              Ver histórico ({product.calculationHistory.length})
+                            </>
+                          )}
                         </button>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <Calendar size={14} />
-                        {formatDate(product.createdAt)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <p className="text-sm text-gray-600">{product.createdBy || 'Sistema'}</p>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handleRecalculateProduction(product)}
-                          disabled={recalculatingProduct === product.id}
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-all duration-200"
-                          title="Recalcular Produção"
-                        >
-                          {recalculatingProduct === product.id ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            <Calculator size={18} />
-                          )}
-                        </button>
-                        <button
-                          onClick={() => navigate(`/products/${product.id}/edit`)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all duration-200"
-                          title="Editar"
-                        >
-                          <Pencil size={18} />
-                        </button>
-                        <button
-                          onClick={() => setDeleteModal({ show: true, product })}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
-                          title="Excluir"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                  
-                  {/* Linha expandida com prévia do produto */}
-                  {expandedProductId === product.id && (
-                    <tr>
-                      <td colSpan={isPriorityMode ? 7 : 6} className="p-0">
-                        <ProductPreview 
-                          product={product} 
-                          components={components}
-                          onClose={() => setExpandedProductId(null)}
-                        />
-                      </td>
-                    </tr>
-                  )}
-                </React.Fragment>
-              ))}
-            </tbody>
-          </table>
+
+                      {/* History */}
+                      {expandedProductId === product.id && renderProductHistory(product)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
@@ -610,10 +613,10 @@ const ProductsListPage: React.FC = () => {
       {/* Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold text-gray-800">Confirmar Exportação</h2>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold text-gray-800">Exportar Plano de Produção</h2>
                 <button
                   onClick={() => setShowExportModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -621,53 +624,73 @@ const ProductsListPage: React.FC = () => {
                   <X size={24} />
                 </button>
               </div>
+            </div>
 
-              <p className="text-sm text-gray-600 mb-4">
-                Defina as quantidades para fabricação de cada produto:
+            <div className="flex-1 overflow-y-auto p-6">
+              <p className="text-sm text-gray-600 mb-6">
+                Defina a quantidade de unidades para produção de cada produto:
               </p>
 
-              <div className="space-y-3 mb-6">
-                {products
-                  .filter(p => p.priority)
-                  .sort((a, b) => (a.priority || 0) - (b.priority || 0))
-                  .map(product => (
-                    <div key={product.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                      <span className="text-sm font-medium text-gray-700 flex-1">
-                        {product.priority}. {product.name}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <label className="text-sm text-gray-600">Qtd:</label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={exportQuantities.get(product.id) || 1}
-                          onChange={(e) => {
-                            const newMap = new Map(exportQuantities);
-                            newMap.set(product.id, parseInt(e.target.value) || 1);
-                            setExportQuantities(newMap);
-                          }}
-                          className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                        />
+              <div className="space-y-3">
+                {productOrder
+                  .map((productId, index) => {
+                    const product = products.find(p => p.id === productId);
+                    if (!product) return null;
+                    
+                    return (
+                      <div key={product.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                        <span className="text-lg font-bold text-gray-500 w-8">
+                          {index + 1}.
+                        </span>
+                        <span className="flex-1 font-medium text-gray-700">
+                          {product.name}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm text-gray-600">Quantidade:</label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={exportQuantities.get(product.id) || 1}
+                            onChange={(e) => {
+                              const value = Math.max(1, parseInt(e.target.value) || 1);
+                              const newMap = new Map(exportQuantities);
+                              newMap.set(product.id, value);
+                              setExportQuantities(newMap);
+                            }}
+                            className="w-20 px-3 py-1.5 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })
+                  .filter(Boolean)}
               </div>
 
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => setShowExportModal(false)}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={confirmExport}
-                  className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200"
-                >
-                  <FileSpreadsheet size={18} />
-                  Confirmar Exportação
-                </button>
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-700">
+                  <strong>Nota:</strong> A planilha exportada conterá duas abas:
+                </p>
+                <ul className="text-sm text-blue-600 mt-2 space-y-1">
+                  <li>• <strong>Plano de Produção:</strong> Lista completa dos componentes necessários</li>
+                  <li>• <strong>Lista de Compras:</strong> Apenas componentes que precisam ser comprados</li>
+                </ul>
               </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+              <button
+                onClick={() => setShowExportModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={confirmExport}
+                className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all duration-200"
+              >
+                <FileSpreadsheet size={18} />
+                Exportar Excel
+              </button>
             </div>
           </div>
         </div>
@@ -675,5 +698,8 @@ const ProductsListPage: React.FC = () => {
     </div>
   );
 };
+
+// Import para resolver o erro de ArrowRight
+import { ArrowRight } from 'lucide-react';
 
 export default ProductsListPage;

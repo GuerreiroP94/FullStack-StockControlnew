@@ -1,6 +1,7 @@
 import { Component } from '../types';
+import * as XLSX from 'xlsx';
 
-// Interface temporária para ProductionReportDto
+// Interface para o relatório de produção
 interface ProductionReportDto {
   productName: string;
   unitsToManufacture: number;
@@ -39,145 +40,231 @@ interface ProductionPlanRow {
 
 class ExportService {
   /**
-   * Exporta componentes para arquivo CSV
-   */
-  exportComponentsToCSV(components: Component[], filename: string = 'componentes.csv') {
-    // Cabeçalhos das colunas
-    const headers = [
-      'ID',
-      'Nome',
-      'Grupo',
-      'Device',
-      'Value',
-      'Package',
-      'Características',
-      'Código Interno',
-      'Gaveta',
-      'Divisão',
-      'Quantidade em Estoque',
-      'Quantidade Mínima',
-      'Preço',
-      'NCM',
-      'NVE',
-      'Ambiente',
-      'Data de Criação'
-    ];
-
-    // Converter componentes para linhas CSV
-    const rows = components.map(comp => [
-      comp.id,
-      comp.name,
-      comp.group,
-      comp.device || '',
-      comp.value || '',
-      comp.package || '',
-      comp.characteristics || '',
-      comp.internalCode || '',
-      comp.drawer || '',
-      comp.division || '',
-      comp.quantityInStock,
-      comp.minimumQuantity,
-      comp.price || '',
-      comp.ncm || '',
-      comp.nve || '',
-      comp.environment === 'laboratorio' ? 'Laboratório' : 'Estoque',
-      comp.createdAt ? new Date(comp.createdAt).toLocaleDateString('pt-BR') : ''
-    ]);
-
-    // Criar conteúdo CSV
-    const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
-    ].join('\n');
-
-    // Criar blob e fazer download
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  /**
-   * Exporta componentes para formato Excel-compatível (CSV com separador de ponto e vírgula)
+   * Exporta componentes para arquivo Excel
    */
   exportComponentsToExcel(components: Component[], filename: string = 'componentes.xlsx') {
-    // Por enquanto, vamos exportar como CSV com extensão .csv
-    // que pode ser aberto no Excel
-    this.exportComponentsToCSV(components, filename.replace('.xlsx', '.csv'));
+    // Preparar dados para Excel
+    const data = components.map(comp => ({
+      'ID': comp.id,
+      'Nome': comp.name,
+      'Grupo': comp.group,
+      'Device': comp.device || '',
+      'Value': comp.value || '',
+      'Package': comp.package || '',
+      'Características': comp.characteristics || '',
+      'Código Interno': comp.internalCode || '',
+      'Gaveta': comp.drawer || '',
+      'Divisão': comp.division || '',
+      'Qtd. Estoque': comp.quantityInStock,
+      'Qtd. Mínima': comp.minimumQuantity,
+      'Preço': comp.price || 0,
+      'NCM': comp.ncm || '',
+      'NVE': comp.nve || '',
+      'Ambiente': comp.environment === 'laboratorio' ? 'Laboratório' : 'Estoque',
+      'Data': comp.createdAt ? new Date(comp.createdAt).toLocaleDateString('pt-BR') : ''
+    }));
+
+    // Criar workbook e worksheet
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Componentes');
+
+    // Ajustar largura das colunas
+    const maxWidth = 30;
+    const wscols = Object.keys(data[0] || {}).map(() => ({ wch: maxWidth }));
+    ws['!cols'] = wscols;
+
+    // Gerar arquivo Excel
+    XLSX.writeFile(wb, filename);
   }
 
   /**
-   * Prepara dados para importação em massa
-   * Retorna um template CSV vazio com os cabeçalhos corretos
+   * Exporta relatório de produção para Excel
+   */
+  exportProductionReport(reportData: ProductionReportDto) {
+    const { productName, unitsToManufacture, components } = reportData;
+    
+    // Preparar dados para Excel
+    const data = components.map(comp => ({
+      'Código Interno': comp.internalCode || '',
+      'Componente': comp.componentName || '',
+      'Device': comp.device || '',
+      'Value': comp.value || '',
+      'Package': comp.package || '',
+      'Características': comp.characteristics || '',
+      'Gaveta': comp.drawer || '',
+      'Divisão': comp.division || '',
+      'Qtd/Unidade': comp.quantityPerUnit || 0,
+      'Qtd Total': comp.totalQuantityNeeded || 0,
+      'Em Estoque': comp.quantityInStock || 0,
+      'Comprar': comp.suggestedPurchase || 0,
+      'Preço Unit.': comp.unitPrice || 0,
+      'Preço Total': comp.totalPrice || 0
+    }));
+
+    // Calcular total geral
+    const totalGeral = components.reduce((sum, comp) => sum + (comp.totalPrice || 0), 0);
+
+    // Adicionar linha de total
+    data.push({
+      'Código Interno': '',
+      'Componente': '',
+      'Device': '',
+      'Value': '',
+      'Package': '',
+      'Características': '',
+      'Gaveta': '',
+      'Divisão': '',
+      'Qtd/Unidade': 'TOTAL:',
+      'Qtd Total': '',
+      'Em Estoque': '',
+      'Comprar': '',
+      'Preço Unit.': '',
+      'Preço Total': totalGeral
+    });
+
+    // Criar workbook
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    
+    // Adicionar título no topo
+    XLSX.utils.sheet_add_aoa(ws, [
+      [`RELATÓRIO DE PRODUÇÃO - ${productName}`],
+      [`Unidades a Fabricar: ${unitsToManufacture}`],
+      [''] // linha vazia
+    ], { origin: 'A1' });
+
+    // Mesclar células do título
+    ws['!merges'] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Produção');
+
+    // Ajustar largura das colunas
+    ws['!cols'] = [
+      { wch: 15 }, // Código Interno
+      { wch: 25 }, // Componente
+      { wch: 15 }, // Device
+      { wch: 15 }, // Value
+      { wch: 15 }, // Package
+      { wch: 25 }, // Características
+      { wch: 10 }, // Gaveta
+      { wch: 10 }, // Divisão
+      { wch: 12 }, // Qtd/Unidade
+      { wch: 12 }, // Qtd Total
+      { wch: 12 }, // Em Estoque
+      { wch: 12 }, // Comprar
+      { wch: 12 }, // Preço Unit.
+      { wch: 15 }  // Preço Total
+    ];
+
+    // Gerar nome do arquivo
+    const filename = `${productName.replace(/\s+/g, '_')}_producao_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    // Gerar arquivo Excel
+    XLSX.writeFile(wb, filename);
+  }
+
+  /**
+   * Exporta plano de produção para Excel
+   */
+  exportProductionPlan(data: ProductionPlanRow[], filename?: string) {
+    // Preparar dados principais
+    const mainData = data.map(row => ({
+      'QTD FABRICAR': row.qtdFabricar,
+      'Qtd. Total': row.qtdTotal,
+      'Device': row.device,
+      'Value': row.value,
+      'Package': row.package,
+      'Características': row.caracteristicas,
+      'Cód.': row.codigo,
+      'Gaveta': row.gaveta,
+      'Divisão': row.divisao,
+      'Qtd. Estoque': row.qtdEstoque,
+      'Qtd. Compra': row.qtdCompra
+    }));
+
+    // Criar worksheet principal
+    const ws = XLSX.utils.json_to_sheet(mainData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Plano de Produção');
+
+    // Criar aba de componentes para compra
+    const itemsNeedingPurchase = data.filter(row => row.qtdCompra > 0);
+    if (itemsNeedingPurchase.length > 0) {
+      const purchaseData = itemsNeedingPurchase.map(row => ({
+        'Device': row.device,
+        'Value': row.value,
+        'Package': row.package,
+        'Características': row.caracteristicas,
+        'Código': row.codigo,
+        'Gaveta': row.gaveta,
+        'Divisão': row.divisao,
+        'Estoque Atual': row.qtdEstoque,
+        'Quantidade Necessária': row.qtdCompra
+      }));
+
+      const wsPurchase = XLSX.utils.json_to_sheet(purchaseData);
+      XLSX.utils.book_append_sheet(wb, wsPurchase, 'Lista de Compras');
+    }
+
+    // Ajustar largura das colunas
+    ws['!cols'] = [
+      { wch: 12 }, // QTD FABRICAR
+      { wch: 12 }, // Qtd. Total
+      { wch: 15 }, // Device
+      { wch: 15 }, // Value
+      { wch: 15 }, // Package
+      { wch: 25 }, // Características
+      { wch: 12 }, // Cód.
+      { wch: 10 }, // Gaveta
+      { wch: 10 }, // Divisão
+      { wch: 12 }, // Qtd. Estoque
+      { wch: 12 }  // Qtd. Compra
+    ];
+
+    // Gerar arquivo Excel
+    const exportFilename = filename || `plano_producao_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, exportFilename);
+  }
+
+  /**
+   * Download template de importação
    */
   downloadImportTemplate() {
-    const headers = [
-      'Name',
-      'Description',
-      'Group',
-      'Device',
-      'Value',
-      'Package',
-      'Characteristics',
-      'InternalCode',
-      'Price',
-      'Environment',
-      'Drawer',
-      'Division',
-      'NCM',
-      'NVE',
-      'QuantityInStock',
-      'MinimumQuantity'
-    ];
+    const data = [{
+      'Nome': 'Resistor 10K',
+      'Descrição': 'Resistor de 10K Ohms',
+      'Grupo': 'Resistor',
+      'Device': 'SMD',
+      'Value': '10K',
+      'Package': '0805',
+      'Características': '1/4W 5%',
+      'Código Interno': 'RES-001',
+      'Preço': 0.15,
+      'Ambiente': 'estoque',
+      'Gaveta': 'A1',
+      'Divisão': '1',
+      'NCM': '85411000',
+      'NVE': '00',
+      'Quantidade em Estoque': 100,
+      'Quantidade Mínima': 20
+    }];
 
-    const exampleRow = [
-      'Resistor 10K',
-      'Resistor de 10K Ohms',
-      'Resistor',
-      'SMD',
-      '10K',
-      '0805',
-      '1/4W 5%',
-      'RES-001',
-      '0.15',
-      'estoque',
-      'A1',
-      '1',
-      '85411000',
-      '00',
-      '100',
-      '20'
-    ];
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template');
 
-    const csvContent = [
-      headers.join(';'),
-      exampleRow.join(';')
-    ].join('\n');
+    // Ajustar largura das colunas
+    ws['!cols'] = Array(16).fill({ wch: 20 });
 
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'template_importacao_componentes.csv');
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    XLSX.writeFile(wb, 'template_importacao_componentes.xlsx');
   }
 
   /**
-   * Processa arquivo de importação
-   * @param file Arquivo CSV para importar
-   * @returns Promise com array de componentes processados
+   * Processa arquivo de importação Excel
    */
   async processImportFile(file: File): Promise<Partial<Component>[]> {
     return new Promise((resolve, reject) => {
@@ -185,40 +272,40 @@ class ExportService {
       
       reader.onload = (e) => {
         try {
-          const text = e.target?.result as string;
-          const lines = text.split('\n').filter(line => line.trim());
+          const data = new Uint8Array(e.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
           
-          if (lines.length < 2) {
+          // Pegar primeira planilha
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+          if (jsonData.length === 0) {
             throw new Error('Arquivo vazio ou sem dados');
           }
 
-          // Pular cabeçalho
-          const dataLines = lines.slice(1);
-          
-          const components: Partial<Component>[] = dataLines.map((line, index) => {
-            const values = line.split(';').map(v => v.trim());
-            
-            if (values.length < 16) {
-              throw new Error(`Linha ${index + 2}: número insuficiente de colunas`);
+          const components: Partial<Component>[] = jsonData.map((row: any, index) => {
+            // Validar campos obrigatórios
+            if (!row['Nome'] || !row['Grupo']) {
+              throw new Error(`Linha ${index + 2}: Nome e Grupo são obrigatórios`);
             }
 
             return {
-              name: values[0],
-              description: values[1] || undefined,
-              group: values[2],
-              device: values[3] || undefined,
-              value: values[4] || undefined,
-              package: values[5] || undefined,
-              characteristics: values[6] || undefined,
-              internalCode: values[7] || undefined,
-              price: values[8] ? parseFloat(values[8]) : undefined,
-              environment: (values[9] === 'laboratorio' ? 'laboratorio' : 'estoque') as 'estoque' | 'laboratorio',
-              drawer: values[10] || undefined,
-              division: values[11] || undefined,
-              ncm: values[12] || undefined,
-              nve: values[13] || undefined,
-              quantityInStock: parseInt(values[14]) || 0,
-              minimumQuantity: parseInt(values[15]) || 0
+              name: row['Nome'],
+              description: row['Descrição'] || undefined,
+              group: row['Grupo'],
+              device: row['Device'] || undefined,
+              value: row['Value'] || undefined,
+              package: row['Package'] || undefined,
+              characteristics: row['Características'] || undefined,
+              internalCode: row['Código Interno'] || undefined,
+              price: row['Preço'] ? parseFloat(row['Preço']) : undefined,
+              environment: (row['Ambiente'] === 'laboratorio' ? 'laboratorio' : 'estoque') as 'estoque' | 'laboratorio',
+              drawer: row['Gaveta'] || undefined,
+              division: row['Divisão'] || undefined,
+              ncm: row['NCM'] || undefined,
+              nve: row['NVE'] || undefined,
+              quantityInStock: parseInt(row['Quantidade em Estoque']) || 0,
+              minimumQuantity: parseInt(row['Quantidade Mínima']) || 0
             };
           });
 
@@ -232,170 +319,8 @@ class ExportService {
         reject(new Error('Erro ao ler arquivo'));
       };
 
-      reader.readAsText(file, 'UTF-8');
+      reader.readAsArrayBuffer(file);
     });
-  }
-
-  /**
-   * Exporta relatório de produção para arquivo CSV
-   * @param reportData Dados do relatório de produção
-   */
-  exportProductionReport(reportData: ProductionReportDto) {
-    const { productName, unitsToManufacture, components } = reportData;
-    
-    // Cabeçalhos das colunas
-    const headers = [
-      'Código Interno',
-      'Componente',
-      'Device',
-      'Value',
-      'Package',
-      'Características',
-      'Gaveta',
-      'Divisão',
-      'Qtd/Unidade',
-      'Qtd Total',
-      'Em Estoque',
-      'Comprar',
-      'Preço Unit.',
-      'Preço Total'
-    ];
-
-    // Título do relatório
-    const title = `RELATÓRIO DE PRODUÇÃO - ${productName}`;
-    const subtitle = `Unidades a Fabricar: ${unitsToManufacture}`;
-    
-    // Preparar dados para o CSV
-    const rows = components.map((comp: any) => [
-      comp.internalCode || '',
-      comp.componentName || '',
-      comp.device || '',
-      comp.value || '',
-      comp.package || '',
-      comp.characteristics || '',
-      comp.drawer || '',
-      comp.division || '',
-      comp.quantityPerUnit || 0,
-      comp.totalQuantityNeeded || 0,
-      comp.quantityInStock || 0,
-      comp.suggestedPurchase || 0,
-      comp.unitPrice ? `R$ ${comp.unitPrice.toFixed(2).replace('.', ',')}` : 'R$ 0,00',
-      `R$ ${comp.totalPrice.toFixed(2).replace('.', ',')}`
-    ]);
-
-    // Calcular total geral
-    const totalGeral = components.reduce((sum: number, comp: any) => sum + (comp.totalPrice || 0), 0);
-    
-    // Adicionar linha de total
-    rows.push([
-      '', '', '', '', '', '', '', '',
-      'TOTAL:', '', '', '',
-      '',
-      `R$ ${totalGeral.toFixed(2).replace('.', ',')}`
-    ]);
-
-    // Criar conteúdo CSV
-    const csvContent = [
-      title,
-      subtitle,
-      '', // linha vazia
-      headers.join(';'),
-      ...rows.map((row: any[]) => row.join(';'))
-    ].join('\n');
-
-    // Criar blob e fazer download
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    const filename = `relatorio_producao_${productName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  /**
-   * Exporta plano de produção para arquivo CSV
-   * @param data Array com os dados do plano de produção
-   */
-  exportProductionPlan(data: ProductionPlanRow[]) {
-    // Cabeçalhos das colunas alinhados com o modelo da imagem
-    const headers = [
-      'QTD FABRICAR',
-      'Qtd. Total',
-      'Device',
-      'Value',
-      'Package',
-      'Características',
-      'Cód.',
-      'Gaveta',
-      'Divisão',
-      'Qtd. Estoque',
-      'Qtd. Compra'
-    ];
-
-    // Converter dados para linhas CSV
-    const rows = data.map(row => [
-      row.qtdFabricar,
-      row.qtdTotal,
-      row.device,
-      row.value,
-      row.package,
-      row.caracteristicas,
-      row.codigo,
-      row.gaveta,
-      row.divisao,
-      row.qtdEstoque,
-      row.qtdCompra
-    ]);
-
-    // Adicionar linha vazia no final para indicar componentes com compra necessária
-    const rowsNeedingPurchase = data.filter(row => row.qtdCompra > 0);
-    if (rowsNeedingPurchase.length > 0) {
-      rows.push(['', '', '', '', '', '', '', '', '', '', '']);
-      rows.push(['COMPONENTES QUE PRECISAM SER COMPRADOS:', '', '', '', '', '', '', '', '', '', '']);
-      rowsNeedingPurchase.forEach(row => {
-        rows.push([
-          '',
-          '',
-          row.device,
-          row.value,
-          row.package,
-          row.caracteristicas,
-          row.codigo,
-          row.gaveta,
-          row.divisao,
-          row.qtdEstoque,
-          row.qtdCompra
-        ]);
-      });
-    }
-
-    // Criar conteúdo CSV
-    const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
-    ].join('\n');
-
-    // Criar blob e fazer download
-    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    
-    const filename = `plano_producao_${new Date().toISOString().split('T')[0]}.csv`;
-    
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 }
 
