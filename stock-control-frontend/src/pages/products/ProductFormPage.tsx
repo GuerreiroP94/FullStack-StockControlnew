@@ -451,7 +451,7 @@ const {
               {/* Device */}
               <select
                 value={filters.device || ''}
-                onChange={(e) => updateFilter(prev => ({ ...prev, device: e.target.value }))}
+                onChange={(e) => updateFilter('device', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
               >
                 <option value="">Todos os Devices</option>
@@ -463,7 +463,7 @@ const {
               {/* Package */}
               <select
                 value={filters.package || ''}
-                onChange={(e) => updateFilter(prev => ({ ...prev, package: e.target.value }))}
+                onChange={(e) => updateFilter('package', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
               >
                 <option value="">Todos os Packages</option>
@@ -475,7 +475,7 @@ const {
               {/* Value */}
               <select
                 value={filters.value || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, value: e.target.value }))}
+                onChange={(e) => updateFilter('value', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
               >
                 <option value="">Todos os Values</option>
