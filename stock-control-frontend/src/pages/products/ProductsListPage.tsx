@@ -191,43 +191,18 @@ const ProductsListPage: React.FC = () => {
   };
 
   const handleConfirmExport = () => {
-    if (!selectedProduct) return;
+  if (!selectedProduct) return;
 
-    // Preparar dados para exportação com ordem customizada
-    const orderedComponents = componentOrder.map(compId => {
-      const pc = selectedProduct.components.find(c => c.componentId === compId);
-      const component = components.find(c => c.id === compId);
-      
-      if (!pc || !component) return null;
-
-      return {
-        componentName: pc.componentName,
-        device: component.device,
-        value: component.value,
-        package: component.package,
-        characteristics: component.characteristics,
-        internalCode: component.internalCode,
-        drawer: component.drawer,
-        division: component.division,
-        quantityPerUnit: pc.quantity,
-        totalQuantityNeeded: pc.quantity,
-        quantityInStock: component.quantityInStock,
-        suggestedPurchase: Math.max(0, pc.quantity - component.quantityInStock),
-        unitPrice: component.price,
-        totalPrice: (component.price || 0) * pc.quantity
-      };
-    }).filter(Boolean);
-
-    const exportData = {
-      productName: selectedProduct.name,
-      unitsToManufacture: 1,
-      components: orderedComponents as any[]
-    };
-
-    exportService.exportProductionReport(exportData);
-    setSuccess('Relatório exportado com sucesso!');
-    setExportModalOpen(false);
-  };
+  exportService.exportProductWithCustomOrder(
+    selectedProduct,
+    components,
+    componentOrder,
+    1 // quantidade padrão
+  );
+  
+  setSuccess('Relatório exportado com sucesso!');
+  setExportModalOpen(false);
+};
 
   const handleDelete = async () => {
     if (!deleteModal.product) return;

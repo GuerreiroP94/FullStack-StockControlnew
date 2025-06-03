@@ -1,6 +1,5 @@
 import { Component } from '../types';
 import * as XLSX from 'xlsx';
-import orderingService from '../services/ordering.service';
 
 // Interface para o relatório de produção
 interface ProductionReportDto {
@@ -331,6 +330,181 @@ class ExportService {
     // Usar a função Excel por padrão
     this.exportComponentsToExcel(components, filename.replace('.csv', '.xlsx'));
   }
+/**
+ * Exporta produto com ordem customizada de componentes
+ */
+exportProductWithCustomOrder(
+  product: { name: string; components: any[] },
+  components: Component[],
+  componentOrder: number[],
+  productionQuantity: number = 1
+) {
+  // Reorganizar componentes baseado na ordem customizada
+  const orderedComponents = componentOrder.map(compId => {
+    const pc = product.components.find(c => c.componentId === compId);
+    const component = components.find(c => c.id === compId);
+    
+    if (!pc || !component) return null;
+
+    return {
+      componentName: pc.componentName || component.name,
+      device: component.device,
+      value: component.value,
+      package: component.package,
+      characteristics: component.characteristics,
+      internalCode: component.internalCode,
+      drawer: component.drawer,
+      division: component.division,
+      quantityPerUnit: pc.quantity,
+      totalQuantityNeeded: pc.quantity * productionQuantity,
+      quantityInStock: component.quantityInStock,
+      suggestedPurchase: Math.max(0, (pc.quantity * productionQuantity) - component.quantityInStock),
+      unitPrice: component.price,
+      totalPrice: (component.price || 0) * pc.quantity * productionQuantity
+    };
+  }).filter(Boolean);
+
+  const reportData: ProductionReportDto = {
+    productName: product.name,
+    unitsToManufacture: productionQuantity,
+    components: orderedComponents as any[]
+  };
+
+  this.exportProductionReport(reportData);
+}
+
+/**
+ * Exporta componentes com filtros aplicados
+ */
+exportComponentsFiltered(
+  components: Component[],
+  filters: {
+    selectedColumns?: Set<string>;
+    group?: string;
+    device?: string;
+    package?: string;
+    value?: string;
+  },
+  filename?: string
+) {
+  // Aplicar filtros se existirem
+  let filteredComponents = components;
+  
+  if (filters.group) {
+    filteredComponents = filteredComponents.filter(c => c.group === filters.group);
+  }
+  if (filters.device) {
+    filteredComponents = filteredComponents.filter(c => c.device === filters.device);
+  }
+  if (filters.package) {
+    filteredComponents = filteredComponents.filter(c => c.package === filters.package);
+  }
+  if (filters.value) {
+    filteredComponents = filteredComponents.filter(c => c.value === filters.value);
+  }
+
+  // Se tiver colunas selecionadas, filtrar
+  if (filters.selectedColumns && filters.selectedColumns.size > 0) {
+    const columnsArray = Array.from(filters.selectedColumns);
+    const processedData = filteredComponents.map(comp => {
+      const filtered: any = {};
+      
+      columnsArray.forEach(col => {
+        if (col in comp) {
+          filtered[col] = comp[col as keyof Component];
+        }
+      });
+      
+      return filtered;
+    });
+    
+    // Criar workbook com dados filtrados
+    const ws = XLSX.utils.json_to_sheet(processedData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Componentes Filtrados');
+    
+    const exportFilename = filename || `componentes_filtrados_${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, exportFilename);
+  } else {
+    // Exportar normal se não tiver filtros de colunas
+    this.exportComponentsToExcel(filteredComponents, filename);
+  }
+}
+
+/**
+ * Exporta relatório resumido de estoque
+ */
+exportStockSummaryReport(components: Component[]) {
+  const summary = {
+    totalComponents: components.length,
+    totalValue: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0,
+    byGroup: {} as { [key: string]: number },
+    criticalItems: [] as any[]
+  };
+
+  components.forEach(comp => {
+    // Calcular valor total
+    summary.totalValue += (comp.price || 0) * comp.quantityInStock;
+    
+    // Contar itens com estoque baixo/zerado
+    if (comp.quantityInStock === 0) {
+      summary.outOfStockItems++;
+    } else if (comp.quantityInStock <= comp.minimumQuantity) {
+      summary.lowStockItems++;
+    }
+    
+    // Agrupar por categoria
+    if (!summary.byGroup[comp.group]) {
+      summary.byGroup[comp.group] = 0;
+    }
+    summary.byGroup[comp.group]++;
+    
+    // Listar itens críticos
+    if (comp.quantityInStock <= comp.minimumQuantity) {
+      summary.criticalItems.push({
+        name: comp.name,
+        group: comp.group,
+        currentStock: comp.quantityInStock,
+        minimumStock: comp.minimumQuantity,
+        deficit: comp.minimumQuantity - comp.quantityInStock
+      });
+    }
+  });
+
+  // Criar planilha de resumo
+  const summaryData = [
+    { Métrica: 'Total de Componentes', Valor: summary.totalComponents },
+    { Métrica: 'Valor Total em Estoque', Valor: `R$ ${summary.totalValue.toFixed(2)}` },
+    { Métrica: 'Itens com Estoque Baixo', Valor: summary.lowStockItems },
+    { Métrica: 'Itens Sem Estoque', Valor: summary.outOfStockItems }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  
+  // Aba de resumo
+  const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(wb, wsSummary, 'Resumo');
+  
+  // Aba de itens críticos
+  if (summary.criticalItems.length > 0) {
+    const wsCritical = XLSX.utils.json_to_sheet(summary.criticalItems);
+    XLSX.utils.book_append_sheet(wb, wsCritical, 'Itens Críticos');
+  }
+  
+  // Aba de distribuição por grupo
+  const groupData = Object.entries(summary.byGroup).map(([group, count]) => ({
+    Grupo: group,
+    'Quantidade de Itens': count
+  }));
+  const wsGroups = XLSX.utils.json_to_sheet(groupData);
+  XLSX.utils.book_append_sheet(wb, wsGroups, 'Por Grupo');
+  
+  const filename = `resumo_estoque_${new Date().toISOString().split('T')[0]}.xlsx`;
+  XLSX.writeFile(wb, filename);
+}
+
 }
 
 export default new ExportService();

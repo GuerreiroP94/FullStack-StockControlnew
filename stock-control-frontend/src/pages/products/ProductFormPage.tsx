@@ -326,40 +326,16 @@ interface ProductionCalculation {
   };
 
   const handleConfirmExport = () => {
-    const orderedComponents = componentOrder.map(compId => {
-      const pc = formData.components.find(c => c.componentId === compId);
-      const component = availableComponents.find(c => c.id === compId);
-      
-      if (!pc || !component) return null;
-
-      return {
-        componentName: component.name,
-        device: component.device,
-        value: component.value,
-        package: component.package,
-        characteristics: component.characteristics,
-        internalCode: component.internalCode,
-        drawer: component.drawer,
-        division: component.division,
-        quantityPerUnit: pc.quantity,
-        totalQuantityNeeded: pc.quantity * productionQuantity,
-        quantityInStock: component.quantityInStock,
-        suggestedPurchase: Math.max(0, (pc.quantity * productionQuantity) - component.quantityInStock),
-        unitPrice: component.price,
-        totalPrice: (component.price || 0) * pc.quantity * productionQuantity
-      };
-    }).filter(Boolean);
-
-    const exportData = {
-      productName: formData.name || 'Novo Produto',
-      unitsToManufacture: productionQuantity,
-      components: orderedComponents as any[]
-    };
-
-    exportService.exportProductionReport(exportData);
-    setSuccess('Relatório exportado com sucesso!');
-    setExportModalOpen(false);
-  };
+  exportService.exportProductWithCustomOrder(
+    { name: formData.name || 'Novo Produto', components: formData.components },
+    availableComponents,
+    componentOrder,
+    productionQuantity
+  );
+  
+  setSuccess('Relatório exportado com sucesso!');
+  setExportModalOpen(false);
+};
 
   const clearFilters = () => {
     setFilters({

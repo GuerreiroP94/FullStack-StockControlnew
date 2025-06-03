@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, GripVertical, Check } from 'lucide-react';
 import BaseModal from '../common/BaseModal';
 import { Component, Product, ProductComponentCreate } from '../../types';
+import orderingService from '../../services/ordering.service';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -40,18 +41,19 @@ const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    if (isDragging === null || isDragging === index) return;
+  e.preventDefault();
+  if (isDragging === null || isDragging === index) return;
 
-    const newOrder = [...localOrder];
-    const draggedItem = newOrder[isDragging];
-    newOrder.splice(isDragging, 1);
-    newOrder.splice(index, 0, draggedItem);
+  const { newOrder, newInputs } = orderingService.handleDragReorder(
+    localOrder,
+    isDragging,
+    index
+  );
 
-    setLocalOrder(newOrder);
-    setIsDragging(index);
-    updateOrderInputsFromArray(newOrder);
-  };
+  setLocalOrder(newOrder);
+  setIsDragging(index);
+  setOrderInputs(newInputs);
+};
 
   const handleDragEnd = () => {
     setIsDragging(null);
@@ -59,12 +61,9 @@ const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const updateOrderInputsFromArray = (orderArray: number[]) => {
-    const newInputs: { [key: number]: number } = {};
-    orderArray.forEach((compId, index) => {
-      newInputs[compId] = index + 1;
-    });
-    setOrderInputs(newInputs);
-  };
+  const newInputs = orderingService.createOrderInputsFromArray(orderArray);
+  setOrderInputs(newInputs);
+};
 
   const handleOrderInputChange = (componentId: number, value: string) => {
     const numValue = parseInt(value) || 1;
@@ -75,18 +74,11 @@ const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleSortByInputs = () => {
-    const componentsWithOrder = localOrder.map(compId => ({
-      componentId: compId,
-      order: orderInputs[compId] || 999
-    }));
-
-    componentsWithOrder.sort((a, b) => a.order - b.order);
-    const newOrder = componentsWithOrder.map(item => item.componentId);
-    
-    setLocalOrder(newOrder);
-    onUpdateOrder(newOrder);
-    updateOrderInputsFromArray(newOrder);
-  };
+  const newOrder = orderingService.sortByOrderInputs(localOrder, orderInputs);
+  setLocalOrder(newOrder);
+  onUpdateOrder(newOrder);
+  updateOrderInputsFromArray(newOrder);
+};
 
   const getComponentDetails = (componentId: number) => {
     return components.find(c => c.id === componentId);
