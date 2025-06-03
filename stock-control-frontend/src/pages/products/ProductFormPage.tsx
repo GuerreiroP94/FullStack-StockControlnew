@@ -31,6 +31,9 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
 import ExportModal from '../../components/modals/ExportModal';
+import { useFilters } from '../../hooks';
+import ComponentFilters from '../../components/forms/ComponentFilters';
+import ComponentCard from '../../components/cards/ComponentCard';
 
 interface ProductionCalculation {
   componentId: number;
@@ -65,23 +68,19 @@ interface ProductionCalculation {
   const [availableComponents, setAvailableComponents] = useState<Component[]>([]);
   const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
   
-  // Estados para filtros
-  const [searchTerm, setSearchTerm] = useState('');
-  const [groups, setGroups] = useState<string[]>(COMPONENT_GROUPS);
-  const [devices, setDevices] = useState<string[]>([]);
-  const [packages, setPackages] = useState<string[]>([]);
-  const [values, setValues] = useState<string[]>([]);
-  
-  const [filters, setFilters] = useState<ComponentFilter>({
-    name: '',
-    group: '',
-    device: '',
-    package: '',
-    value: '',
-    searchTerm: '',
-    pageNumber: 1,
-    pageSize: 1000
-  });
+  // Hook de filtros
+const {
+  filters,
+  updateFilter,
+  clearFilters,
+  searchTerm,
+  setSearchTerm,
+  groups,
+  devices,
+  packages,
+  values,
+  updateDropdowns
+} = useFilters();
   
   // Estados para cálculo de produção
   const [productionQuantity, setProductionQuantity] = useState(1);
@@ -161,34 +160,17 @@ interface ProductionCalculation {
   }, [productionQuantity, formData.components, availableComponents]);
 
   const fetchComponents = async () => {
-    try {
-      const components = await componentsService.getAll();
-      setAvailableComponents(components);
-      setFilteredComponents(components);
-      
-      // Extrair valores únicos para os dropdowns
-      const uniqueGroups = Array.from(new Set(components.map(c => c.group).filter(Boolean)));
-      const uniqueDevices = Array.from(new Set(components.map(c => c.device).filter(Boolean)));
-      const uniquePackages = Array.from(new Set(components.map(c => c.package).filter(Boolean)));
-      const uniqueValues = Array.from(new Set(components.map(c => c.value).filter(Boolean)));
-
-      if (uniqueGroups.length > 0) {
-        setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
-      }
-      if (uniqueDevices.length > 0) {
-        setDevices(uniqueDevices as string[]);
-      }
-      if (uniquePackages.length > 0) {
-        setPackages(uniquePackages as string[]);
-      }
-      if (uniqueValues.length > 0) {
-        setValues(uniqueValues as string[]);
-      }
-    } catch (error) {
-      console.error('Error fetching components:', error);
-    }
-  };
-
+  try {
+    const components = await componentsService.getAll();
+    setAvailableComponents(components);
+    setFilteredComponents(components);
+    
+    // Usar o hook para atualizar dropdowns
+    updateDropdowns(components);
+  } catch (error) {
+    console.error('Error fetching components:', error);
+  }
+};
   const fetchProduct = async (productId: number) => {
     try {
       setLoading(true);
@@ -337,20 +319,6 @@ interface ProductionCalculation {
   setExportModalOpen(false);
 };
 
-  const clearFilters = () => {
-    setFilters({
-      name: '',
-      group: '',
-      device: '',
-      package: '',
-      value: '',
-      searchTerm: '',
-      pageNumber: 1,
-      pageSize: 1000
-    });
-    setSearchTerm('');
-  };
-
   if (loading) {
     return (
       <div className="p-6">
@@ -471,7 +439,7 @@ interface ProductionCalculation {
               {/* Grupo */}
               <select
                 value={filters.group || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, group: e.target.value }))}
+                onChange={(e) => updateFilter('group', e.target.value)}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
               >
                 <option value="">Todos os Grupos</option>
@@ -483,7 +451,7 @@ interface ProductionCalculation {
               {/* Device */}
               <select
                 value={filters.device || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, device: e.target.value }))}
+                onChange={(e) => updateFilter(prev => ({ ...prev, device: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
               >
                 <option value="">Todos os Devices</option>
@@ -495,7 +463,7 @@ interface ProductionCalculation {
               {/* Package */}
               <select
                 value={filters.package || ''}
-                onChange={(e) => setFilters(prev => ({ ...prev, package: e.target.value }))}
+                onChange={(e) => updateFilter(prev => ({ ...prev, package: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
               >
                 <option value="">Todos os Packages</option>
