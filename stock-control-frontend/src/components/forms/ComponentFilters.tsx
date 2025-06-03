@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Filter, X } from 'lucide-react';
+import { ComponentFilter } from '../../types';
 
 interface ComponentFiltersProps {
   searchTerm: string;
@@ -10,7 +11,7 @@ interface ComponentFiltersProps {
     package?: string;
     value?: string;
   };
-  onFilterChange: (key: string, value: string) => void;
+  onFilterChange: (key: keyof ComponentFilter, value: any) => void;
   groups: string[];
   devices: string[];
   packages: string[];
