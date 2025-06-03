@@ -51,12 +51,6 @@ const {
     'qtd_estoque', 'entrada', 'saida', 'ncm', 'nve'
   ]));
   
-  // Dropdowns de grupos
-  const [groups, setGroups] = useState<string[]>(COMPONENT_GROUPS);
-  const [devices, setDevices] = useState<string[]>([]);
-  const [packages, setPackages] = useState<string[]>([]);
-  const [values, setValues] = useState<string[]>([]);
-  
   // Hook de filtros
 const {
   filters,
@@ -72,7 +66,6 @@ const {
 } = useFilters();
 
   // Busca em tempo real
-  const [searchTerm, setSearchTerm] = useState('');
   const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
 
   useEffect(() => {
@@ -360,7 +353,7 @@ const fetchComponents = async () => {
                 <tr>
                   <th className="px-3 py-4">
                     <button
-                      onClick={handleSelectAll}
+                      onClick={() => handleSelectAll(filteredComponents.map(c => c.id))}
                       className="text-gray-600 hover:text-gray-800"
                     >
                       {selectedCount === filteredComponents.length ? 
