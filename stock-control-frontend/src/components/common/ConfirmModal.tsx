@@ -1,5 +1,7 @@
 import React from 'react';
-import { X, AlertTriangle, Info, CheckCircle, XCircle } from 'lucide-react';
+import { AlertTriangle, Info, CheckCircle, XCircle } from 'lucide-react';
+import BaseModal from './BaseModal';
+import LoadingSpinner from './LoadingSpinner';
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -24,8 +26,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   type = 'warning',
   isLoading = false
 }) => {
-  if (!isOpen) return null;
-
   const typeConfig = {
     danger: {
       icon: XCircle,
@@ -57,49 +57,38 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const Icon = config.icon;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md transform transition-all">
-        <div className="p-6">
-          <div className="flex items-center gap-4 mb-4">
-            <div className={`w-12 h-12 ${config.bgColor} rounded-full flex items-center justify-center`}>
-              <Icon className={config.iconColor} size={24} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">{title}</h2>
-            </div>
-            <button
-              onClick={onClose}
-              className="ml-auto text-gray-400 hover:text-gray-600"
-              disabled={isLoading}
-            >
-              <X size={24} />
-            </button>
+    <BaseModal isOpen={isOpen} onClose={onClose} showCloseButton={false}>
+      <div className="p-6">
+        <div className="flex items-center gap-4 mb-4">
+          <div className={`w-12 h-12 ${config.bgColor} rounded-full flex items-center justify-center`}>
+            <Icon className={config.iconColor} size={24} />
           </div>
-          
-          <p className="text-gray-600 mb-6">{message}</p>
-          
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={onClose}
-              disabled={isLoading}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200 disabled:opacity-50"
-            >
-              {cancelText}
-            </button>
-            <button
-              onClick={onConfirm}
-              disabled={isLoading}
-              className={`px-4 py-2 bg-gradient-to-r ${config.buttonColor} text-white rounded-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50`}
-            >
-              {isLoading && (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              )}
-              {confirmText}
-            </button>
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-gray-800">{title}</h2>
           </div>
         </div>
+        
+        <p className="text-gray-600 mb-6 ml-16">{message}</p>
+        
+        <div className="flex gap-3 justify-end">
+          <button
+            onClick={onClose}
+            disabled={isLoading}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200 disabled:opacity-50"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isLoading}
+            className={`px-4 py-2 bg-gradient-to-r ${config.buttonColor} text-white rounded-lg transition-all duration-200 flex items-center gap-2 disabled:opacity-50`}
+          >
+            {isLoading && <LoadingSpinner size="sm" />}
+            {confirmText}
+          </button>
+        </div>
       </div>
-    </div>
+    </BaseModal>
   );
 };
 

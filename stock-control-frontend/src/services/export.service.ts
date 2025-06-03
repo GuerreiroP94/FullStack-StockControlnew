@@ -1,5 +1,6 @@
 import { Component } from '../types';
 import * as XLSX from 'xlsx';
+import orderingService from '../services/ordering.service';
 
 // Interface para o relatório de produção
 interface ProductionReportDto {

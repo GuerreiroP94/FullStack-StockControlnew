@@ -3,7 +3,7 @@ import { Settings, Key, Save, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import usersService from '../../services/users.service';
 import authService from '../../services/auth.service';
-import ConfirmationModal from '../../components/common/ConfirmationModal';
+import ConfirmModal from '../../components/common/ConfirmModal';
 import SuccessMessage from '../../components/common/SuccessMessage';
 import ErrorMessage from '../../components/common/ErrorMessage';
 
@@ -318,16 +318,17 @@ const SettingsPage: React.FC = () => {
       </form>
 
       {/* Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={showConfirmModal}
-        onClose={() => setShowConfirmModal(false)}
-        onConfirm={confirmSave}
-        title="Confirmar Alterações"
-        message="Tem certeza que deseja salvar as alterações nas suas configurações?"
-        confirmText="Sim, salvar"
-        cancelText="Cancelar"
-        isLoading={loading}
-      />
+      <ConfirmModal
+  isOpen={showConfirmModal}
+  onClose={() => setShowConfirmModal(false)}
+  onConfirm={confirmSave}
+  title="Confirmar Alterações"
+  message="Tem certeza que deseja salvar as alterações nas suas configurações?"
+  confirmText="Sim, salvar"
+  cancelText="Cancelar"
+  isLoading={loading}
+  type="info"
+/>
     </div>
   );
 };
