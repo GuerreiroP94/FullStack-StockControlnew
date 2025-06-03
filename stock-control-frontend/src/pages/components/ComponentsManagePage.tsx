@@ -23,6 +23,8 @@ import ConfirmModal from '../../components/common/ConfirmModal';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
 import movementsService from '../../services/movements.service';
+import { useFilters, useComponentSelection } from '../../hooks';
+import ComponentFilters from '../../components/forms/ComponentFilters';
 
 const ComponentsManagePage: React.FC = () => {
   const navigate = useNavigate();
@@ -32,10 +34,32 @@ const ComponentsManagePage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [deleteModal, setDeleteModal] = useState<{ show: boolean; components: Component[] }>({ show: false, components: [] });
+
+  // Hook de seleção
+  const {
+    selectedComponents,
+    handleSelectComponent,
+    handleSelectAll,
+    clearSelection,
+    selectedCount
+  } = useComponentSelection();
+
+  // Hook de filtros
+  const {
+    filters,
+    updateFilter,
+    clearFilters,
+    searchTerm,
+    setSearchTerm,
+    groups,
+    devices,
+    packages,
+    values,
+    updateDropdowns
+  } = useFilters();
   
   // Estados de edição
   const [isEditMode, setIsEditMode] = useState(false);
-  const [selectedComponents, setSelectedComponents] = useState<Set<number>>(new Set());
   const [stockEntries, setStockEntries] = useState<Map<number, ComponentStockEntry>>(new Map());
   const [editedComponents, setEditedComponents] = useState<Map<number, Component>>(new Map());
   
@@ -48,34 +72,15 @@ const ComponentsManagePage: React.FC = () => {
     'price', 'quantityInStock', 'minimumQuantity', 'environment',
     'drawer', 'division', 'ncm', 'nve'
   ]));
-  
-  // Dropdowns de grupos
-  const [groups, setGroups] = useState<string[]>(COMPONENT_GROUPS);
-  const [devices, setDevices] = useState<string[]>([]);
-  const [packages, setPackages] = useState<string[]>([]);
-  const [values, setValues] = useState<string[]>([]);
-  
-  // Filtros
-  const [filters, setFilters] = useState<ComponentFilter>({
-    name: '',
-    group: '',
-    device: '',
-    package: '',
-    value: '',
-    searchTerm: '',
-    pageNumber: 1,
-    pageSize: 100
-  });
 
   // Busca em tempo real
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
+    const [filteredComponents, setFilteredComponents] = useState<Component[]>([]);
 
   useEffect(() => {
     // Verificar se vieram componentes pré-selecionados da página de consulta
     const state = location.state as { selectedComponents?: number[] };
     if (state?.selectedComponents) {
-      setSelectedComponents(new Set(state.selectedComponents));
+      clearSelection()
       setIsEditMode(true);
     }
     
@@ -109,18 +114,7 @@ const ComponentsManagePage: React.FC = () => {
       const uniquePackages = Array.from(new Set(data.map(c => c.package).filter(Boolean)));
       const uniqueValues = Array.from(new Set(data.map(c => c.value).filter(Boolean)));
 
-      if (uniqueGroups.length > 0) {
-        setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
-      }
-      if (uniqueDevices.length > 0) {
-        setDevices(uniqueDevices as string[]);
-      }
-      if (uniquePackages.length > 0) {
-        setPackages(uniquePackages as string[]);
-      }
-      if (uniqueValues.length > 0) {
-        setValues(uniqueValues as string[]);
-      }
+     updateDropdowns(data);
     } catch (error) {
       setError('Erro ao carregar componentes');
       console.error(error);
@@ -129,25 +123,7 @@ const ComponentsManagePage: React.FC = () => {
     }
   };
 
-  const handleSelectAll = () => {
-    if (selectedComponents.size === filteredComponents.length) {
-      setSelectedComponents(new Set());
-    } else {
-      setSelectedComponents(new Set(filteredComponents.map(c => c.id)));
-    }
-  };
-
-  const handleSelectComponent = (id: number) => {
-    const newSelected = new Set(selectedComponents);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedComponents(newSelected);
-  };
-
-  const handleStockEntry = (componentId: number, field: 'entry' | 'exit', value: string) => {
+    const handleStockEntry = (componentId: number, field: 'entry' | 'exit', value: string) => {
     const numValue = parseInt(value) || 0;
     const current = stockEntries.get(componentId) || { componentId, entryQuantity: 0, exitQuantity: 0 };
     
@@ -183,8 +159,8 @@ const ComponentsManagePage: React.FC = () => {
       setEditedComponents(newEditedComponents);
       
       // Se não há componentes selecionados, selecionar todos automaticamente
-      if (selectedComponents.size === 0) {
-        setSelectedComponents(new Set(components.map(c => c.id)));
+      if (selectedCount === 0) {
+        clearSelection()
       }
     } else {
       // Ao sair do modo de edição, limpar seleções e componentes editados
@@ -277,7 +253,7 @@ const ComponentsManagePage: React.FC = () => {
       setIsEditMode(false);
       setStockEntries(new Map());
       setEditedComponents(new Map());
-      setSelectedComponents(new Set());
+      clearSelection()
       fetchComponents();
     } catch (error) {
       setError('Erro ao salvar alterações');
@@ -285,7 +261,7 @@ const ComponentsManagePage: React.FC = () => {
   };
 
   const handleDeleteClick = () => {
-    if (selectedComponents.size === 0) {
+    if (selectedCount === 0) {
       setError('Selecione ao menos um componente para deletar');
       return;
     }
@@ -298,7 +274,7 @@ const ComponentsManagePage: React.FC = () => {
       await componentsService.deleteMultiple(selectedIds);
       
       setSuccess('Componentes excluídos com sucesso!');
-      setSelectedComponents(new Set());
+      clearSelection()
       fetchComponents();
       setDeleteModal({ show: false, components: [] });
     } catch (error) {
@@ -307,7 +283,7 @@ const ComponentsManagePage: React.FC = () => {
   };
 
   const handleExportClick = () => {
-    if (selectedComponents.size === 0) {
+    if (selectedCount === 0) {
       setError('Selecione ao menos um componente para exportar');
       return;
     }
@@ -396,11 +372,11 @@ const ComponentsManagePage: React.FC = () => {
             <button
               onClick={handleDeleteClick}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                selectedComponents.size > 0
+                selectedCount > 0
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-              disabled={selectedComponents.size === 0}
+              disabled={selectedCount === 0}
             >
               <Trash2 size={18} />
               <span className="font-medium">Deletar</span>
@@ -409,11 +385,11 @@ const ComponentsManagePage: React.FC = () => {
             <button
               onClick={handleExportClick}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 ${
-                selectedComponents.size > 0
+                selectedCount > 0
                   ? 'bg-purple-600 text-white hover:bg-purple-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
-              disabled={selectedComponents.size === 0}
+              disabled={selectedCount === 0}
             >
               <FileSpreadsheet size={18} />
               <span className="font-medium">Exportar</span>
@@ -432,10 +408,10 @@ const ComponentsManagePage: React.FC = () => {
               <span className="font-medium">Salvar Alterações</span>
             </button>
             
-            {selectedComponents.size > 0 && (
+            {selectedCount > 0 && (
               <button
                 onClick={() => {
-                  setSelectedComponents(new Set());
+                  clearSelection()
                   if (isEditMode) {
                     setIsEditMode(false);
                     setEditedComponents(new Map());
@@ -445,7 +421,7 @@ const ComponentsManagePage: React.FC = () => {
                 className="flex items-center gap-2 px-4 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-all duration-200"
               >
                 <X size={18} />
-                <span className="font-medium">Cancelar Seleção ({selectedComponents.size})</span>
+                <span className="font-medium">Cancelar Seleção ({selectedCount})</span>
               </button>
             )}
           </div>
@@ -457,74 +433,17 @@ const ComponentsManagePage: React.FC = () => {
       {success && <SuccessMessage message={success} onClose={() => setSuccess('')} className="mb-6" />}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Filter size={20} className="text-gray-500" />
-          <h2 className="text-lg font-semibold text-gray-800">Filtros</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {/* Grupo */}
-          <select
-            value={filters.group || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, group: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Grupos</option>
-            {groups.map(group => (
-              <option key={group} value={group}>{group}</option>
-            ))}
-          </select>
-
-          {/* Device */}
-          <select
-            value={filters.device || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, device: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Devices</option>
-            {devices.map(device => (
-              <option key={device} value={device}>{device}</option>
-            ))}
-          </select>
-
-          {/* Package */}
-          <select
-            value={filters.package || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, package: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Packages</option>
-            {packages.map(pkg => (
-              <option key={pkg} value={pkg}>{pkg}</option>
-            ))}
-          </select>
-
-          {/* Value */}
-          <select
-            value={filters.value || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, value: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Values</option>
-            {values.map(value => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar em todas as colunas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-            />
-          </div>
-        </div>
-      </div>
+<ComponentFilters
+  searchTerm={searchTerm}
+  onSearchChange={setSearchTerm}
+  filters={filters}
+  onFilterChange={updateFilter}
+  groups={groups}
+  devices={devices}
+  packages={packages}
+  values={values}
+  onClearFilters={clearFilters}
+/>
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -563,14 +482,14 @@ const ComponentsManagePage: React.FC = () => {
                 <tr>
                   <th className="px-3 py-4">
                     <button
-                      onClick={handleSelectAll}
-                      className="text-gray-600 hover:text-gray-800"
-                    >
-                      {selectedComponents.size === filteredComponents.length ? 
-                        <CheckSquare size={20} /> : 
-                        <Square size={20} />
-                      }
-                    </button>
+  onClick={() => handleSelectAll(filteredComponents.map(c => c.id))}
+  className="text-gray-600 hover:text-gray-800"
+>
+  {selectedCount === filteredComponents.length ? 
+    <CheckSquare size={20} /> : 
+    <Square size={20} />
+  }
+</button>
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Id
