@@ -20,6 +20,8 @@ import { COMPONENT_GROUPS } from '../../utils/constants';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import SuccessMessage from '../../components/common/SuccessMessage';
+import { useFilters, useComponentSelection } from '../../hooks';
+import ComponentFilters from '../../components/forms/ComponentFilters';
 
 const ComponentsConsultPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,8 +30,14 @@ const ComponentsConsultPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   
-  // Estados de seleção
-  const [selectedComponents, setSelectedComponents] = useState<Set<number>>(new Set());
+  // Hook de seleção
+const {
+  selectedComponents,
+  handleSelectComponent,
+  handleSelectAll,
+  clearSelection,
+  selectedCount
+} = useComponentSelection();
   
   // Estados de edição
   const [isEditMode, setIsEditMode] = useState(false);
@@ -49,17 +57,19 @@ const ComponentsConsultPage: React.FC = () => {
   const [packages, setPackages] = useState<string[]>([]);
   const [values, setValues] = useState<string[]>([]);
   
-  // Filtros
-  const [filters, setFilters] = useState<ComponentFilter>({
-    name: '',
-    group: '',
-    device: '',
-    package: '',
-    value: '',
-    searchTerm: '',
-    pageNumber: 1,
-    pageSize: 100
-  });
+  // Hook de filtros
+const {
+  filters,
+  updateFilter,
+  clearFilters,
+  searchTerm,
+  setSearchTerm,
+  groups,
+  devices,
+  packages,
+  values,
+  updateDropdowns
+} = useFilters();
 
   // Busca em tempo real
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,70 +80,25 @@ const ComponentsConsultPage: React.FC = () => {
   }, [filters.group, filters.device, filters.package, filters.value]);
 
   useEffect(() => {
-    // Filtrar componentes localmente quando o usuário digitar
-    if (searchTerm) {
-      const filtered = components.filter(comp => 
-        Object.values(comp).some(value => 
-          value && value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-      setFilteredComponents(filtered);
-    } else {
-      setFilteredComponents(components);
-    }
-  }, [searchTerm, components]);
+  fetchComponents();
+}, [filters.group, filters.device, filters.package, filters.value]);
 
-  const fetchComponents = async () => {
-    try {
-      setLoading(true);
-      const data = await componentsService.getAll(filters);
-      setComponents(data);
-      setFilteredComponents(data);
-      
-      // Extrair valores únicos para os dropdowns
-      const uniqueGroups = Array.from(new Set(data.map(c => c.group).filter(Boolean)));
-      const uniqueDevices = Array.from(new Set(data.map(c => c.device).filter(Boolean)));
-      const uniquePackages = Array.from(new Set(data.map(c => c.package).filter(Boolean)));
-      const uniqueValues = Array.from(new Set(data.map(c => c.value).filter(Boolean)));
-
-      if (uniqueGroups.length > 0) {
-        setGroups([...COMPONENT_GROUPS, ...uniqueGroups.filter(g => !COMPONENT_GROUPS.includes(g))]);
-      }
-      if (uniqueDevices.length > 0) {
-        setDevices(uniqueDevices as string[]);
-      }
-      if (uniquePackages.length > 0) {
-        setPackages(uniquePackages as string[]);
-      }
-      if (uniqueValues.length > 0) {
-        setValues(uniqueValues as string[]);
-      }
-    } catch (error) {
-      setError('Erro ao carregar componentes');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectAll = () => {
-    if (selectedComponents.size === filteredComponents.length) {
-      setSelectedComponents(new Set());
-    } else {
-      setSelectedComponents(new Set(filteredComponents.map(c => c.id)));
-    }
-  };
-
-  const handleSelectComponent = (id: number) => {
-    const newSelected = new Set(selectedComponents);
-    if (newSelected.has(id)) {
-      newSelected.delete(id);
-    } else {
-      newSelected.add(id);
-    }
-    setSelectedComponents(newSelected);
-  };
-
+const fetchComponents = async () => {
+  try {
+    setLoading(true);
+    const data = await componentsService.getAll(filters);
+    setComponents(data);
+    setFilteredComponents(data);
+    
+    // Usar o hook para atualizar dropdowns
+    updateDropdowns(data);
+  } catch (error) {
+    setError('Erro ao carregar componentes');
+    console.error(error);
+  } finally {
+    setLoading(false);
+  }
+};
   const handleEditClick = () => {
     setIsEditMode(!isEditMode);
     if (!isEditMode) {
@@ -301,7 +266,7 @@ const ComponentsConsultPage: React.FC = () => {
             
             {selectedComponents.size > 0 && (
               <button
-                onClick={() => setSelectedComponents(new Set())}
+                onClick={() => clearSelection()}
                 className="flex items-center gap-2 px-4 py-2.5 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-all duration-200"
               >
                 <X size={18} />
@@ -353,74 +318,17 @@ const ComponentsConsultPage: React.FC = () => {
       {success && <SuccessMessage message={success} onClose={() => setSuccess('')} className="mb-6" />}
 
       {/* Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Filter size={20} className="text-gray-500" />
-          <h2 className="text-lg font-semibold text-gray-800">Filtros</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {/* Grupo */}
-          <select
-            value={filters.group || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, group: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Grupos</option>
-            {groups.map(group => (
-              <option key={group} value={group}>{group}</option>
-            ))}
-          </select>
-
-          {/* Device */}
-          <select
-            value={filters.device || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, device: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Devices</option>
-            {devices.map(device => (
-              <option key={device} value={device}>{device}</option>
-            ))}
-          </select>
-
-          {/* Package */}
-          <select
-            value={filters.package || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, package: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Packages</option>
-            {packages.map(pkg => (
-              <option key={pkg} value={pkg}>{pkg}</option>
-            ))}
-          </select>
-
-          {/* Value */}
-          <select
-            value={filters.value || ''}
-            onChange={(e) => setFilters(prev => ({ ...prev, value: e.target.value }))}
-            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 bg-white"
-          >
-            <option value="">Todos os Values</option>
-            {values.map(value => (
-              <option key={value} value={value}>{value}</option>
-            ))}
-          </select>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Buscar em todas as colunas..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-            />
-          </div>
-        </div>
-      </div>
+<ComponentFilters
+  searchTerm={searchTerm}
+  onSearchChange={setSearchTerm}
+  filters={filters}
+  onFilterChange={updateFilter}
+  groups={groups}
+  devices={devices}
+  packages={packages}
+  values={values}
+  onClearFilters={clearFilters}
+/>
 
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -455,7 +363,7 @@ const ComponentsConsultPage: React.FC = () => {
                       onClick={handleSelectAll}
                       className="text-gray-600 hover:text-gray-800"
                     >
-                      {selectedComponents.size === filteredComponents.length ? 
+                      {selectedCount === filteredComponents.length ? 
                         <CheckSquare size={20} /> : 
                         <Square size={20} />
                       }
