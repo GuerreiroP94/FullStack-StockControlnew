@@ -10,7 +10,10 @@ import {
   Cpu,
   Calculator,
   FileSpreadsheet,
-  AlertCircle
+  AlertCircle,
+  X,
+  GripVertical,
+  Check
 } from 'lucide-react';
 import productsService from '../../services/products.service';
 import componentsService from '../../services/components.service';
@@ -39,6 +42,228 @@ interface ProductionCalculation {
   totalPrice: number;
 }
 
+// Modal de Exportação Atualizado
+const ExportModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  product: { name: string; components: ProductComponentCreate[] };
+  components: Component[];
+  productOrder: number[];
+  onUpdateOrder: (order: number[]) => void;
+  onConfirmExport: () => void;
+}> = ({ isOpen, onClose, product, components, productOrder, onUpdateOrder, onConfirmExport }) => {
+  const [localOrder, setLocalOrder] = useState<number[]>(productOrder);
+  const [isDragging, setIsDragging] = useState<number | null>(null);
+  const [orderInputs, setOrderInputs] = useState<{ [key: number]: number }>({});
+
+  useEffect(() => {
+    setLocalOrder(productOrder);
+    // Inicializar inputs de ordem
+    const initialInputs: { [key: number]: number } = {};
+    productOrder.forEach((compId, index) => {
+      initialInputs[compId] = index + 1;
+    });
+    setOrderInputs(initialInputs);
+  }, [productOrder]);
+
+  if (!isOpen) return null;
+
+  const handleDragStart = (index: number) => {
+    setIsDragging(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (isDragging === null || isDragging === index) return;
+
+    const newOrder = [...localOrder];
+    const draggedItem = newOrder[isDragging];
+    newOrder.splice(isDragging, 1);
+    newOrder.splice(index, 0, draggedItem);
+
+    setLocalOrder(newOrder);
+    setIsDragging(index);
+    
+    // Atualizar inputs após drag & drop
+    updateOrderInputsFromArray(newOrder);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(null);
+    onUpdateOrder(localOrder);
+  };
+
+  const updateOrderInputsFromArray = (orderArray: number[]) => {
+    const newInputs: { [key: number]: number } = {};
+    orderArray.forEach((compId, index) => {
+      newInputs[compId] = index + 1;
+    });
+    setOrderInputs(newInputs);
+  };
+
+  const handleOrderInputChange = (componentId: number, value: string) => {
+    const numValue = parseInt(value) || 1;
+    setOrderInputs(prev => ({
+      ...prev,
+      [componentId]: numValue
+    }));
+  };
+
+  const handleSortByInputs = () => {
+    // Criar array de componentes com suas ordens
+    const componentsWithOrder = localOrder.map(compId => ({
+      componentId: compId,
+      order: orderInputs[compId] || 999
+    }));
+
+    // Ordenar pelo número de ordem
+    componentsWithOrder.sort((a, b) => a.order - b.order);
+
+    // Extrair nova ordem de IDs
+    const newOrder = componentsWithOrder.map(item => item.componentId);
+    
+    setLocalOrder(newOrder);
+    onUpdateOrder(newOrder);
+    
+    // Atualizar inputs para refletir a nova ordem
+    updateOrderInputsFromArray(newOrder);
+  };
+
+  const getComponentDetails = (componentId: number) => {
+    return components.find(c => c.id === componentId);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-800">{product.name}</h2>
+              <p className="text-sm text-gray-500">Defina a ordem dos componentes para exportação</p>
+            </div>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X size={24} />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {/* Botão Ordenar */}
+          <div className="mb-4 flex justify-end">
+            <button
+              onClick={handleSortByInputs}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+              Ordenar
+            </button>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <table className="min-w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ordem</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qtd</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qtd. Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Device</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Value</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Package</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Característica</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cód.</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Gaveta</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Divisão</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Qtd. Estoque</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Qtd. Compra</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {localOrder.map((compId, index) => {
+                  const pc = product.components.find(c => c.componentId === compId);
+                  if (!pc) return null;
+                  
+                  const component = getComponentDetails(pc.componentId);
+                  if (!component) return null;
+
+                  const needToBuy = Math.max(0, pc.quantity - component.quantityInStock);
+
+                  return (
+                    <tr
+                      key={compId}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={`cursor-move hover:bg-gray-50 ${isDragging === index ? 'opacity-50' : ''}`}
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <GripVertical size={16} className="text-gray-400" />
+                          <input
+                            type="number"
+                            value={orderInputs[compId] || ''}
+                            onChange={(e) => handleOrderInputChange(compId, e.target.value)}
+                            className="w-16 px-2 py-1 text-center border border-gray-300 rounded focus:border-blue-500 focus:ring-1 focus:ring-blue-200"
+                            min="1"
+                            onClick={(e) => e.stopPropagation()}
+                            onMouseDown={(e) => e.stopPropagation()}
+                          />
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-sm">{pc.quantity}</td>
+                      <td className="px-4 py-3 text-sm">{pc.quantity}</td>
+                      <td className="px-4 py-3 text-sm">{component.device || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{component.value || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{component.package || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{component.characteristics || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{component.internalCode || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{component.drawer || '-'}</td>
+                      <td className="px-4 py-3 text-sm">{component.division || '-'}</td>
+                      <td className="px-4 py-3 text-sm text-center">{component.quantityInStock}</td>
+                      <td className={`px-4 py-3 text-sm text-center font-medium ${needToBuy > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {needToBuy || '0'}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+            <p className="text-sm text-blue-700">
+              <strong>Dica:</strong> Você pode ordenar os componentes de duas formas:
+            </p>
+            <ul className="text-sm text-blue-600 mt-2 space-y-1">
+              <li>• <strong>Arrastar e soltar:</strong> Clique e arraste as linhas para reordenar</li>
+              <li>• <strong>Digitar números:</strong> Digite a ordem desejada nos campos e clique em "Ordenar"</li>
+            </ul>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-gray-200 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg"
+          >
+            Cancelar
+          </button>
+          <button
+            onClick={onConfirmExport}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            <Check size={18} />
+            Confirmar e Exportar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ProductFormPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -60,6 +285,10 @@ const ProductFormPage: React.FC = () => {
   const [productionCalc, setProductionCalc] = useState<ProductionCalculation[]>([]);
   const [unitsToManufacture, setUnitsToManufacture] = useState(1);
   const [showProductionReport, setShowProductionReport] = useState(false);
+  
+  // Estados para o modal de exportação
+  const [exportModalOpen, setExportModalOpen] = useState(false);
+  const [componentOrder, setComponentOrder] = useState<number[]>([]);
   
   const [formData, setFormData] = useState<ProductCreate>({
     name: '',
@@ -239,37 +468,52 @@ const ProductFormPage: React.FC = () => {
     return productionCalc.reduce((sum, calc) => sum + calc.totalPrice, 0);
   };
 
- const exportProductionReport = () => {
-  try {
-    // Usar productionCalc que já está calculado
-    const reportData = {
-      productName: formData.name,
-      unitsToManufacture: productionQuantity, // Usar productionQuantity ao invés de unitsToManufacture
-      components: productionCalc.map(calc => ({
-        componentName: calc.componentName,
-        device: calc.device,
-        value: calc.value,
-        package: calc.package,
-        characteristics: calc.characteristics,
-        internalCode: calc.internalCode,
-        drawer: calc.drawer,
-        division: calc.division,
-        quantityPerUnit: calc.quantityPerUnit,
-        totalQuantityNeeded: calc.totalRequired,
-        quantityInStock: calc.currentStock,
-        suggestedPurchase: calc.suggestedPurchase,
-        unitPrice: calc.unitPrice,
-        totalPrice: calc.totalPrice
-      }))
+  const handleExportClick = () => {
+    if (formData.components.length === 0) {
+      setError('Adicione ao menos um componente antes de exportar');
+      return;
+    }
+    
+    setComponentOrder(formData.components.map(c => c.componentId));
+    setExportModalOpen(true);
+  };
+
+  const handleConfirmExport = () => {
+    // Preparar dados para exportação com ordem customizada
+    const orderedComponents = componentOrder.map(compId => {
+      const pc = formData.components.find(c => c.componentId === compId);
+      const component = availableComponents.find(c => c.id === compId);
+      
+      if (!pc || !component) return null;
+
+      return {
+        componentName: component.name,
+        device: component.device,
+        value: component.value,
+        package: component.package,
+        characteristics: component.characteristics,
+        internalCode: component.internalCode,
+        drawer: component.drawer,
+        division: component.division,
+        quantityPerUnit: pc.quantity,
+        totalQuantityNeeded: pc.quantity * productionQuantity,
+        quantityInStock: component.quantityInStock,
+        suggestedPurchase: Math.max(0, (pc.quantity * productionQuantity) - component.quantityInStock),
+        unitPrice: component.price,
+        totalPrice: (component.price || 0) * pc.quantity * productionQuantity
+      };
+    }).filter(Boolean);
+
+    const exportData = {
+      productName: formData.name || 'Novo Produto',
+      unitsToManufacture: productionQuantity,
+      components: orderedComponents as any[]
     };
 
-    exportService.exportProductionReport(reportData);
+    exportService.exportProductionReport(exportData);
     setSuccess('Relatório exportado com sucesso!');
-  } catch (error) {
-    setError('Erro ao exportar relatório');
-    console.error(error);
-  }
-};
+    setExportModalOpen(false);
+  };
 
   if (loading) {
     return (
@@ -518,7 +762,7 @@ const ProductFormPage: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={exportProductionReport}
+                  onClick={handleExportClick}
                   className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                 >
                   <FileSpreadsheet size={18} />
@@ -564,14 +808,7 @@ const ProductFormPage: React.FC = () => {
                       <td className={`px-4 py-3 text-sm text-right font-medium ${
                         calc.suggestedPurchase > 0 ? 'text-red-600' : 'text-green-600'
                       }`}>
-                        {calc.suggestedPurchase > 0 ? (
-                          <span className="flex items-center justify-end gap-1">
-                            <AlertCircle size={14} />
-                            {calc.suggestedPurchase}
-                          </span>
-                        ) : (
-                          'OK'
-                        )}
+                        {calc.suggestedPurchase > 0 ? calc.suggestedPurchase : 'OK'}
                       </td>
                       <td className="px-4 py-3 text-sm text-right">
                         R$ {calc.unitPrice.toFixed(2)}
@@ -625,6 +862,17 @@ const ProductFormPage: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={exportModalOpen}
+        onClose={() => setExportModalOpen(false)}
+        product={{ name: formData.name, components: formData.components }}
+        components={availableComponents}
+        productOrder={componentOrder}
+        onUpdateOrder={setComponentOrder}
+        onConfirmExport={handleConfirmExport}
+      />
     </div>
   );
 };
