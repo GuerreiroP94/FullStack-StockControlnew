@@ -1,5 +1,4 @@
-﻿// Usings essenciais para DI funcionar corretamente com nossas camadas
-using PreSystem.StockControl.Application.Interfaces.Services;
+﻿using PreSystem.StockControl.Application.Interfaces.Services;
 using PreSystem.StockControl.Application.Services;
 using PreSystem.StockControl.Domain.Interfaces.Repositories;
 using PreSystem.StockControl.Infrastructure.Repositories;
@@ -13,51 +12,76 @@ using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// IMPORTANTE: Carregar variáveis de ambiente do arquivo .env
-DotNetEnv.Env.Load();
+// CORREÇÃO 1: Carregar .env apenas em desenvolvimento
+if (builder.Environment.IsDevelopment())
+{
+    DotNetEnv.Env.Load();
+}
 
-// Adicionar as variáveis de ambiente à configuração
+// CORREÇÃO 2: Configuração de environment variables melhorada
 builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
 {
     ["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("EMAIL_SMTP_USER"),
     ["EmailSettings:SmtpPassword"] = Environment.GetEnvironmentVariable("EMAIL_SMTP_PASSWORD"),
     ["EmailSettings:FromEmail"] = Environment.GetEnvironmentVariable("EMAIL_FROM"),
-    ["FrontendUrl"] = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:5173"
-
+    ["FrontendUrl"] = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000"
 });
+
+// CORREÇÃO 3: Connection String dinâmica para Railway
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
+{
+    builder.Configuration["ConnectionStrings:DefaultConnection"] = Environment.GetEnvironmentVariable("DATABASE_URL");
+}
+
+// CORREÇÃO 4: JWT Secret dinâmico
+if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
+{
+    builder.Configuration["JwtSettings:Secret"] = Environment.GetEnvironmentVariable("JWT_SECRET");
+}
 
 // Registro de dependências da aplicação
-//Aqui informamos ao ASP.NET Core como criar instâncias dos nossos serviços e repositórios
-builder.Services.AddScoped<IComponentRepository, ComponentRepository>(); // Injeta o repositório de componentes
-builder.Services.AddScoped<IComponentService, ComponentService>();       // Injeta o serviço de componentes
-builder.Services.AddHttpContextAccessor(); // Permite acessar o contexto HTTP atual (útil para recuperar dados do usuário logado)
-builder.Services.AddScoped<IUserContextService, UserContextService>(); // Injeta o serviço que fornece dados do usuário logado a partir do token JWT
-builder.Services.AddScoped<IUserRepository, UserRepository>(); // Injeta o repositório de usuários
-builder.Services.AddScoped<IUserService, UserService>(); // Injeta o serviço de usuários
-builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>(); // Repositório de tokens de reset
-builder.Services.AddScoped<IEmailService, EmailService>(); // Serviço de email
+builder.Services.AddScoped<IComponentRepository, ComponentRepository>();
+builder.Services.AddScoped<IComponentService, ComponentService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUserContextService, UserContextService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
-// Configuração do CORS para permitir requisições do frontend
+// CORREÇÃO 5: CORS dinâmico para produção
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend",
-        builder =>
+    options.AddPolicy("AllowFrontend", corsBuilder =>
+    {
+        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
+        var allowedOrigins = new List<string>
         {
-            builder.WithOrigins(
-                "http://localhost:3000",  // Create React App
-                "http://localhost:5173"   // Vite
-            )
+            "http://localhost:3000",  // Create React App dev
+            "http://localhost:5173",  // Vite dev
+            frontendUrl
+        };
+
+        // Se estiver em produção, adicionar domínios do Cloudflare
+        if (builder.Environment.IsProduction())
+        {
+            allowedOrigins.Add("https://*.pages.dev");
+            allowedOrigins.Add("https://*.workers.dev");
+        }
+
+        corsBuilder.WithOrigins(allowedOrigins.ToArray())
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials(); // Importante para cookies/auth
-        });
+            .AllowCredentials();
+    });
 });
-// Serviços padrões da aplicação
-builder.Services.AddProjectDependencies(builder.Configuration); // Adiciona a DI do projeto (com configuração)
-builder.Services.AddControllers();         // Habilita os controllers
 
-builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>(); // Registra os validadores
-builder.Services.AddFluentValidationAutoValidation(); // Habilita validação automática nos controllers
+// Serviços padrões da aplicação
+builder.Services.AddProjectDependencies(builder.Configuration);
+builder.Services.AddControllers();
+
+builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>();
+builder.Services.AddFluentValidationAutoValidation();
 
 // Documentação da API com Swagger
 builder.Services.AddEndpointsApiExplorer();
@@ -65,11 +89,11 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "PreSystem.StockControl", Version = "v1" });
 
-    //Adiciona suporte a JWT no Swagger
+    // Adiciona suporte a JWT no Swagger
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = @"JWT Authorization header usando o esquema Bearer.
-                        Digite assim: 'Bearer {seu token}' (sem aspas)",
+        Description = @"JWT Authorization header usando o esquema Bearer. 
+Digite assim: 'Bearer {seu token}' (sem aspas)",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
@@ -95,17 +119,15 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Chave secreta para assinatura do token (em produção, armazene no appsettings)
+// Configuração JWT
 var jwtSettings = builder.Configuration.GetSection("JwtSettings");
 var secretKey = jwtSettings.GetValue<string>("Secret");
 
-// Validação para evitar null
 if (string.IsNullOrEmpty(secretKey))
-    throw new InvalidOperationException("JWT Secret Key is missing in appsettings.json");
+    throw new InvalidOperationException("JWT Secret Key is missing in configuration");
 
 var key = Encoding.ASCII.GetBytes(secretKey);
 
-// Configura a autenticação JWT com validação de assinatura, emissor e audiência
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -113,33 +135,47 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = false;
+    options.RequireHttpsMetadata = builder.Environment.IsProduction(); // CORREÇÃO 6
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuerSigningKey = true,                                // Valida a assinatura do token
-        IssuerSigningKey = new SymmetricSecurityKey(key),               // Chave usada na assinatura
-
-        ValidateIssuer = true,                                          // Ativa a validação do emissor
-        ValidateAudience = true,                                        // Ativa a validação da audiência
-        ValidIssuer = jwtSettings.GetValue<string>("Issuer"),           // Define o emissor válido (do appsettings.json)
-        ValidAudience = jwtSettings.GetValue<string>("Audience")        // Define a audiência válida (do appsettings.json)
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidIssuer = jwtSettings.GetValue<string>("Issuer"),
+        ValidAudience = jwtSettings.GetValue<string>("Audience")
     };
 });
 
 var app = builder.Build();
 
-// Habilita o Swagger em ambiente de desenvolvimento
+// CORREÇÃO 7: Swagger apenas em desenvolvimento
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend"); // Permite requisições do frontend React (Vite)
-app.UseHttpsRedirection();  // Redirecionamento para HTTPS
-app.UseAuthentication();     // Habilita o middleware de autenticação para validar o token JWT enviado nas requisições
-app.UseAuthorization();     // Middleware de autorização (JWT, policies, etc.)
-app.MapControllers();       // Mapeia automaticamente todos os controllers da aplicação
+app.UseCors("AllowFrontend");
 
-app.Run();                  // Inicia a aplicação
+// CORREÇÃO 8: HTTPS redirection apenas em produção
+if (app.Environment.IsProduction())
+{
+    app.UseHttpsRedirection();
+}
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+// CORREÇÃO 9: PORT dinâmica para Railway - ESTA É A PARTE MAIS IMPORTANTE!
+var port = Environment.GetEnvironmentVariable("PORT") ?? "5123";
+var url = $"http://0.0.0.0:{port}";
+
+Console.WriteLine($"🚀 Starting server on {url}");
+Console.WriteLine($"🌍 Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine($"🔗 Frontend URL: {Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000"}");
+
+app.Run(url);
