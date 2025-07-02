@@ -1,23 +1,21 @@
-# Estágio de build
+# DOCKERFILE CORRIGIDO PARA RAILWAY
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /app
 
-# Copiar arquivos de projeto primeiro (para cache de layers)
-COPY *.sln ./
-COPY PreSystem.StockControl.WebApi/*.csproj ./PreSystem.StockControl.WebApi/
-COPY PreSystem.StockControl.Application/*.csproj ./PreSystem.StockControl.Application/
-COPY PreSystem.StockControl.Domain/*.csproj ./PreSystem.StockControl.Domain/
-COPY PreSystem.StockControl.Infrastructure/*.csproj ./PreSystem.StockControl.Infrastructure/
-
-# Restaurar dependências
-RUN dotnet restore
-
-# Copiar código fonte
+# Copiar TUDO primeiro para garantir que os arquivos estejam disponíveis
 COPY . .
 
-# Build do projeto WebApi
+# Verificar se os arquivos estão lá (debug)
+RUN ls -la
+RUN find . -name "*.sln" -o -name "*.csproj"
+
+# Restaurar dependências do projeto WebApi especificamente
 WORKDIR /app/PreSystem.StockControl.WebApi
-RUN dotnet publish -c Release -o /app/out
+RUN dotnet restore
+
+# Voltar para raiz e fazer publish
+WORKDIR /app
+RUN dotnet publish PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj -c Release -o out
 
 # Estágio final - imagem de runtime
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
