@@ -1,0 +1,44 @@
+# Estágio de build
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /app
+
+# Copiar arquivos de projeto primeiro (para cache de layers)
+COPY *.sln ./
+COPY PreSystem.StockControl.WebApi/*.csproj ./PreSystem.StockControl.WebApi/
+COPY PreSystem.StockControl.Application/*.csproj ./PreSystem.StockControl.Application/
+COPY PreSystem.StockControl.Domain/*.csproj ./PreSystem.StockControl.Domain/
+COPY PreSystem.StockControl.Infrastructure/*.csproj ./PreSystem.StockControl.Infrastructure/
+
+# Restaurar dependências
+RUN dotnet restore
+
+# Copiar código fonte
+COPY . .
+
+# Build do projeto WebApi
+WORKDIR /app/PreSystem.StockControl.WebApi
+RUN dotnet publish -c Release -o /app/out
+
+# Estágio final - imagem de runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
+WORKDIR /app
+
+# Copiar arquivos publicados
+COPY --from=build /app/out .
+
+# Configurar timezone para Brasil
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+ENV TZ=America/Sao_Paulo
+
+# Railway fornece a PORT via environment variable
+EXPOSE $PORT
+
+# Configurar URLs para aceitar qualquer interface (necessário no Railway)
+ENV ASPNETCORE_URLS=http://+:$PORT
+
+# Variáveis de produção
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV DOTNET_RUNNING_IN_CONTAINER=true
+
+# Ponto de entrada
+ENTRYPOINT ["dotnet", "PreSystem.StockControl.WebApi.dll"]

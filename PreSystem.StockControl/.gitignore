@@ -1,9 +1,2 @@
-.vs/
-.vscode/
 *.vsidx
-*.user
-*.suo
-bin/
-obj/
 node_modules/
-.env

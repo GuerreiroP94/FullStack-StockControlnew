@@ -1,0 +1,12 @@
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\bin\Debug\net8.0\PreSystem.StockControl.Domain.deps.json
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\bin\Debug\net8.0\PreSystem.StockControl.Domain.dll
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\bin\Debug\net8.0\PreSystem.StockControl.Domain.pdb
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.AssemblyInfoInputs.cache
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.AssemblyInfo.cs
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.csproj.CoreCompileInputs.cache
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.sourcelink.json
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.dll
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\refint\PreSystem.StockControl.Domain.dll
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\PreSystem.StockControl.Domain.pdb
+C:\Projetos\PreSystem.StockControl\PreSystem.StockControl.Domain\obj\Debug\net8.0\ref\PreSystem.StockControl.Domain.dll
