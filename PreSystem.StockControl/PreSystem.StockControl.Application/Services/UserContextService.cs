@@ -15,13 +15,20 @@ namespace PreSystem.StockControl.Application.Services
 
         public string? GetCurrentUsername()
         {
-            return _httpContextAccessor.HttpContext?.User?.Identity?.Name;
+            var context = _httpContextAccessor.HttpContext;
+            return context?.User?.FindFirst("Name")?.Value
+                ?? context?.User?.Identity?.Name;
         }
 
         public int? GetCurrentUserId()
         {
-            var userIdClaim = _httpContextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
-            return userIdClaim != null ? int.Parse(userIdClaim.Value) : null;
+            var context = _httpContextAccessor.HttpContext;
+            var userIdClaim = context?.User?.FindFirst("UserId")?.Value;
+
+            if (int.TryParse(userIdClaim, out int userId))
+                return userId;
+
+            return null;
         }
     }
 }

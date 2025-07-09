@@ -1,8 +1,8 @@
-# DOCKERFILE SIMPLES E FUNCIONAL
+# DOCKERFILE CORRIGIDO PARA RAILWAY
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copiar solution e projetos para restore (otimização de cache)
+# Copiar arquivos de projeto para restore otimizado
 COPY PreSystem.StockControl.sln ./
 COPY PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj ./PreSystem.StockControl.WebApi/
 COPY PreSystem.StockControl.Application/PreSystem.StockControl.Application.csproj ./PreSystem.StockControl.Application/
@@ -10,13 +10,16 @@ COPY PreSystem.StockControl.Domain/PreSystem.StockControl.Domain.csproj ./PreSys
 COPY PreSystem.StockControl.Infrastructure/PreSystem.StockControl.Infrastructure.csproj ./PreSystem.StockControl.Infrastructure/
 
 # Restore das dependências
-RUN dotnet restore
+RUN dotnet restore PreSystem.StockControl.sln
 
 # Copiar todo o código fonte
 COPY . ./
 
-# Build e publish do projeto WebApi
-RUN dotnet publish PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj -c Release -o /app/publish --no-restore
+# Build e publish - REMOVIDO --no-restore QUE CAUSAVA ERRO
+RUN dotnet publish PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj \
+    -c Release \
+    -o /app/publish \
+    --verbosity normal
 
 # Imagem final (runtime)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
@@ -25,13 +28,14 @@ WORKDIR /app
 # Copiar arquivos publicados
 COPY --from=build /app/publish .
 
-# Configurações de ambiente
+# Configurações de ambiente para Railway
 ENV ASPNETCORE_ENVIRONMENT=Production
 ENV ASPNETCORE_URLS=http://+:$PORT
 ENV TZ=America/Sao_Paulo
 
-# Instalar tzdata para timezone
-RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+# Porta padrão caso $PORT não esteja definida
+EXPOSE 8080
+ENV PORT=8080
 
 # Entry point
 ENTRYPOINT ["dotnet", "PreSystem.StockControl.WebApi.dll"]

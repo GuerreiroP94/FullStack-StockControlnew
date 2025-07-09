@@ -1,166 +1,167 @@
-﻿using PreSystem.StockControl.Application.Interfaces.Services;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using PreSystem.StockControl.Application.Interfaces.Services;
 using PreSystem.StockControl.Application.Services;
 using PreSystem.StockControl.Domain.Interfaces.Repositories;
-using PreSystem.StockControl.Infrastructure.Repositories;
 using PreSystem.StockControl.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.EntityFrameworkCore;
+using PreSystem.StockControl.Infrastructure.Repositories;
 using System.Text;
-using PreSystem.StockControl.Application.Validators;
-using FluentValidation;
-using FluentValidation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Carregar .env apenas em desenvolvimento
-if (builder.Environment.IsDevelopment())
+// ===== CONFIGURAÇÃO PARA RAILWAY =====
+// Porta dinâmica do Railway
+var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
+builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
+// ===== CONFIGURAÇÃO DO BANCO POSTGRESQL =====
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' ou 'DATABASE_URL' não encontrada.");
+
+// Converter DATABASE_URL do Railway para connection string do .NET
+if (connectionString.StartsWith("postgresql://"))
 {
-    DotNetEnv.Env.Load();
+    var uri = new Uri(connectionString);
+    connectionString = $"Host={uri.Host};Port={uri.Port};Database={uri.AbsolutePath.Trim('/')};Username={uri.UserInfo.Split(':')[0]};Password={uri.UserInfo.Split(':')[1]};SSL Mode=Require;Trust Server Certificate=true";
 }
 
-// CONFIGURAÇÃO 1: CONNECTION STRING
-var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
-    ?? builder.Configuration.GetConnectionString("DefaultConnection");
-
-if (string.IsNullOrEmpty(connectionString))
-{
-    throw new InvalidOperationException("Connection string not found");
-}
-
-// CONFIGURAÇÃO 2: ENTITY FRAMEWORK
 builder.Services.AddDbContext<StockControlDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// CONFIGURAÇÃO 3: REPOSITORIES E SERVICES
-builder.Services.AddScoped<IComponentRepository, ComponentRepository>();
-builder.Services.AddScoped<IComponentService, ComponentService>();
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
-builder.Services.AddScoped<IEmailService, EmailService>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IUserContextService, UserContextService>();
-
-// CONFIGURAÇÃO 4: CONTROLLERS E VALIDAÇÃO
-builder.Services.AddControllers();
-builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>();
-builder.Services.AddFluentValidationAutoValidation();
-
-// CONFIGURAÇÃO 5: CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowFrontend", corsBuilder =>
-    {
-        var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
-
-        corsBuilder.WithOrigins(
-                "http://localhost:3000",
-                "http://localhost:5173",
-                frontendUrl
-            )
-            .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
-
-        if (builder.Environment.IsProduction())
-        {
-            corsBuilder.WithOrigins("https://*.pages.dev");
-        }
-    });
-});
-
-// CONFIGURAÇÃO 6: SWAGGER
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new() { Title = "PreSystem.StockControl", Version = "v1" });
-
-    c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-    {
-        Description = "JWT Authorization header using the Bearer scheme.",
-        Name = "Authorization",
-        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-        Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
-        Scheme = "Bearer"
-    });
-
-    c.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement()
-    {
-        {
-            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
-            {
-                Reference = new Microsoft.OpenApi.Models.OpenApiReference
-                {
-                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = Microsoft.OpenApi.Models.ParameterLocation.Header,
-            },
-            new List<string>()
-        }
-    });
-});
-
-// CONFIGURAÇÃO 7: JWT
-var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
-    ?? builder.Configuration.GetSection("JwtSettings")["Secret"];
-
-if (string.IsNullOrEmpty(jwtSecret))
-{
-    throw new InvalidOperationException("JWT Secret is required");
-}
+// ===== CONFIGURAÇÃO JWT =====
+var jwtSecret = builder.Configuration["JWT_SECRET"]
+    ?? Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? throw new InvalidOperationException("JWT_SECRET não configurado.");
 
 var key = Encoding.ASCII.GetBytes(jwtSecret);
 
-builder.Services.AddAuthentication(options =>
+builder.Services.AddAuthentication(x =>
 {
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 })
-.AddJwtBearer(options =>
+.AddJwtBearer(x =>
 {
-    options.RequireHttpsMetadata = builder.Environment.IsProduction();
-    options.SaveToken = true;
-    options.TokenValidationParameters = new TokenValidationParameters
+    x.RequireHttpsMetadata = false;
+    x.SaveToken = true;
+    x.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidIssuer = builder.Configuration.GetSection("JwtSettings")["Issuer"] ?? "PreSystem",
-        ValidAudience = builder.Configuration.GetSection("JwtSettings")["Audience"] ?? "PreSystem"
+        ValidateIssuer = false,
+        ValidateAudience = false,
+        ClockSkew = TimeSpan.Zero
     };
 });
 
-// BUILD DA APLICAÇÃO
+// ===== CONFIGURAÇÃO CORS =====
+var frontendUrl = builder.Configuration["FrontendUrl"]
+    ?? Environment.GetEnvironmentVariable("FRONTEND_URL")
+    ?? "http://localhost:3000";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowSpecificOrigin", policy =>
+    {
+        policy.WithOrigins(frontendUrl)
+              .AllowAnyMethod()
+              .AllowAnyHeader()
+              .AllowCredentials();
+    });
+});
+
+// ===== DEPENDÊNCIAS =====
+builder.Services.AddHttpContextAccessor(); // Para o UserContextService
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
+builder.Services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IStockMovementService, StockMovementService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IUserContextService, UserContextService>();
+
+// ===== CONTROLADORES E SWAGGER =====
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "PreSystem Stock Control API",
+        Version = "v1",
+        Description = "API para controle de estoque - Deploy Railway"
+    });
+
+    // Configuração JWT no Swagger
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header usando o esquema Bearer. Exemplo: \"Authorization: Bearer {token}\"",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] {}
+        }
+    });
+});
+
+// ===== HEALTH CHECK =====
+builder.Services.AddHealthChecks()
+    .AddNpgSql(connectionString);
+
 var app = builder.Build();
 
-// CONFIGURAÇÃO 8: MIDDLEWARE
-if (app.Environment.IsDevelopment())
+// ===== MIDDLEWARE =====
+if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PreSystem Stock Control API v1");
+        c.RoutePrefix = string.Empty; // Swagger na raiz
+    });
 }
 
-app.UseCors("AllowFrontend");
-
-if (app.Environment.IsProduction())
-{
-    app.UseHttpsRedirection();
-}
-
+app.UseHealthChecks("/health");
+app.UseCors("AllowSpecificOrigin");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
-// CONFIGURAÇÃO 9: PORTA DINÂMICA
-var port = Environment.GetEnvironmentVariable("PORT") ?? "5123";
-var url = $"http://0.0.0.0:{port}";
+// ===== MIGRAÇÃO AUTOMÁTICA =====
+try
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var context = scope.ServiceProvider.GetRequiredService<StockControlDbContext>();
+        await context.Database.MigrateAsync();
+        Console.WriteLine("✅ Migração do banco executada com sucesso!");
+    }
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"❌ Erro na migração: {ex.Message}");
+}
 
-Console.WriteLine($"🚀 Starting server on {url}");
-Console.WriteLine($"🌍 Environment: {app.Environment.EnvironmentName}");
+Console.WriteLine($"🚀 Servidor rodando na porta {port}");
+Console.WriteLine($"📊 Swagger disponível em: http://localhost:{port}");
 
-app.Run(url);
+app.Run();
