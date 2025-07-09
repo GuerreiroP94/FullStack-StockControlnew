@@ -21,7 +21,6 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? Environment.GetEnvironmentVariable("DATABASE_URL")
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' ou 'DATABASE_URL' não encontrada.");
 
-// Converter DATABASE_URL do Railway para connection string do .NET
 if (connectionString.StartsWith("postgresql://"))
 {
     var uri = new Uri(connectionString);
@@ -76,10 +75,13 @@ builder.Services.AddCors(options =>
 // ===== DEPENDÊNCIAS =====
 builder.Services.AddHttpContextAccessor();
 
-// Repositories
+// Repositories - TODOS OS REPOSITÓRIOS NECESSÁRIOS
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+builder.Services.AddScoped<IStockAlertRepository, StockAlertRepository>();
+builder.Services.AddScoped<IComponentRepository, ComponentRepository>();
+builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 
 // Services da Application Layer
 builder.Services.AddScoped<IUserService, UserService>();
@@ -87,8 +89,9 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IStockMovementService, StockMovementService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
+builder.Services.AddScoped<IAlertManagerService, AlertManagerService>();
 
-// AuthService da WebApi Layer (com JWT)
+// AuthService da WebApi Layer (com reset de senha completo)
 builder.Services.AddScoped<IAuthService, PreSystem.StockControl.WebApi.Services.AuthService>();
 
 // ===== CONTROLADORES E SWAGGER =====
@@ -166,7 +169,7 @@ catch (Exception ex)
     Console.WriteLine($"❌ Erro na migração: {ex.Message}");
 }
 
-Console.WriteLine($" Servidor rodando na porta {port}");
-Console.WriteLine($" Swagger disponível em: http://localhost:{port}");
+Console.WriteLine($"🚀 Servidor rodando na porta {port}");
+Console.WriteLine($"📊 Swagger disponível em: http://localhost:{port}");
 
 app.Run();
