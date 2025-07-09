@@ -6,7 +6,5 @@ namespace PreSystem.StockControl.Application.Interfaces.Services
     {
         Task<string> GenerateJwtTokenAsync(UserResponseDto user);
         Task<UserResponseDto?> ValidateAndLoginAsync(UserLoginDto loginDto);
-        Task<bool> RequestPasswordResetAsync(string email);
-        Task<bool> ResetPasswordAsync(string token, string newPassword);
     }
 }

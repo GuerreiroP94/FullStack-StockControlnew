@@ -7,12 +7,12 @@ using PreSystem.StockControl.Application.Services;
 using PreSystem.StockControl.Domain.Interfaces.Repositories;
 using PreSystem.StockControl.Infrastructure.Persistence;
 using PreSystem.StockControl.Infrastructure.Repositories;
+using PreSystem.StockControl.WebApi.Services;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ===== CONFIGURAÇÃO PARA RAILWAY =====
-// Porta dinâmica do Railway
 var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 
@@ -74,16 +74,22 @@ builder.Services.AddCors(options =>
 });
 
 // ===== DEPENDÊNCIAS =====
-builder.Services.AddHttpContextAccessor(); // Para o UserContextService
+builder.Services.AddHttpContextAccessor();
+
+// Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IStockMovementRepository, StockMovementRepository>();
+
+// Services da Application Layer
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IStockMovementService, StockMovementService>();
-builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IUserContextService, UserContextService>();
+
+// AuthService da WebApi Layer (com JWT)
+builder.Services.AddScoped<IAuthService, PreSystem.StockControl.WebApi.Services.AuthService>();
 
 // ===== CONTROLADORES E SWAGGER =====
 builder.Services.AddControllers();
@@ -97,7 +103,6 @@ builder.Services.AddSwaggerGen(c =>
         Description = "API para controle de estoque - Deploy Railway"
     });
 
-    // Configuração JWT no Swagger
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header usando o esquema Bearer. Exemplo: \"Authorization: Bearer {token}\"",
@@ -136,7 +141,7 @@ if (app.Environment.IsDevelopment() || app.Environment.IsProduction())
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "PreSystem Stock Control API v1");
-        c.RoutePrefix = string.Empty; // Swagger na raiz
+        c.RoutePrefix = string.Empty;
     });
 }
 
@@ -161,7 +166,7 @@ catch (Exception ex)
     Console.WriteLine($"❌ Erro na migração: {ex.Message}");
 }
 
-Console.WriteLine($"🚀 Servidor rodando na porta {port}");
-Console.WriteLine($"📊 Swagger disponível em: http://localhost:{port}");
+Console.WriteLine($" Servidor rodando na porta {port}");
+Console.WriteLine($" Swagger disponível em: http://localhost:{port}");
 
 app.Run();
