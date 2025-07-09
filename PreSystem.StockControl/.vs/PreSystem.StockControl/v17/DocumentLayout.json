@@ -269,6 +269,10 @@
           "SelectedChildIndex": 4,
           "Children": [
             {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 3,
               "Title": "AuthService.cs",
@@ -278,8 +282,7 @@
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\Services\\AuthService.cs",
               "ViewState": "AgIAAC0AAAAAAAAAAAAmwD4AAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-09T17:45:56.069Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-09T17:45:56.069Z"
             },
             {
               "$type": "Document",
@@ -291,8 +294,7 @@
               "RelativeToolTip": "PreSystem.StockControl.Application\\Services\\UserContextService.cs",
               "ViewState": "AgIAABAAAAAAAAAAAAAmwCEAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-09T17:37:11.016Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-09T17:37:11.016Z"
             },
             {
               "$type": "Document",
@@ -304,12 +306,7 @@
               "RelativeToolTip": "PreSystem.StockControl.Application\\Interfaces\\Services\\IAuthService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-07-09T17:36:04.865Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+              "WhenOpened": "2025-07-09T17:36:04.865Z"
             },
             {
               "$type": "Document",
@@ -347,8 +344,7 @@
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\Program.cs",
               "ViewState": "AgIAAJoAAAAAAAAAAAAmwKkAAAAUAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-25T17:07:31.896Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-25T17:07:31.896Z"
             },
             {
               "$type": "Document",
@@ -360,8 +356,7 @@
               "RelativeToolTip": "PreSystem.StockControl.Application\\Interfaces\\Services\\IComponentService.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-05-29T15:43:56.311Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-29T15:43:56.311Z"
             },
             {
               "$type": "Document",
@@ -371,7 +366,7 @@
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeToolTip": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
-              "ViewState": "AgIAAAEAAAAAAAAAAAAQwBMAAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAQwBUAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-06-12T04:40:40.063Z",
               "EditorCaption": ""
@@ -379,7 +374,7 @@
             {
               "$type": "Document",
               "DocumentIndex": 9,
-              "Title": "PreSystem.StockControl.Domain",
+              "Title": "PreSystem.StockControl.Domain.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
@@ -423,8 +418,7 @@
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.http",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAADAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003502|",
-              "WhenOpened": "2025-05-29T15:22:01.306Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-05-29T15:22:01.306Z"
             },
             {
               "$type": "Document",
