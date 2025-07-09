@@ -1,42 +1,37 @@
-# DOCKERFILE CORRIGIDO PARA RAILWAY
+# DOCKERFILE SIMPLES E FUNCIONAL
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /app
+WORKDIR /src
 
-# Copiar TUDO primeiro para garantir que os arquivos estejam disponíveis
-COPY . .
+# Copiar solution e projetos para restore (otimização de cache)
+COPY PreSystem.StockControl.sln ./
+COPY PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj ./PreSystem.StockControl.WebApi/
+COPY PreSystem.StockControl.Application/PreSystem.StockControl.Application.csproj ./PreSystem.StockControl.Application/
+COPY PreSystem.StockControl.Domain/PreSystem.StockControl.Domain.csproj ./PreSystem.StockControl.Domain/
+COPY PreSystem.StockControl.Infrastructure/PreSystem.StockControl.Infrastructure.csproj ./PreSystem.StockControl.Infrastructure/
 
-# Verificar se os arquivos estão lá (debug)
-RUN ls -la
-RUN find . -name "*.sln" -o -name "*.csproj"
-
-# Restaurar dependências do projeto WebApi especificamente
-WORKDIR /app/PreSystem.StockControl.WebApi
+# Restore das dependências
 RUN dotnet restore
 
-# Voltar para raiz e fazer publish
-WORKDIR /app
-RUN dotnet publish PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj -c Release -o out
+# Copiar todo o código fonte
+COPY . ./
 
-# Estágio final - imagem de runtime
+# Build e publish do projeto WebApi
+RUN dotnet publish PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj -c Release -o /app/publish --no-restore
+
+# Imagem final (runtime)
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
 # Copiar arquivos publicados
-COPY --from=build /app/out .
+COPY --from=build /app/publish .
 
-# Configurar timezone para Brasil
-RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
+# Configurações de ambiente
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:$PORT
 ENV TZ=America/Sao_Paulo
 
-# Railway fornece a PORT via environment variable
-EXPOSE $PORT
+# Instalar tzdata para timezone
+RUN apt-get update && apt-get install -y tzdata && rm -rf /var/lib/apt/lists/*
 
-# Configurar URLs para aceitar qualquer interface (necessário no Railway)
-ENV ASPNETCORE_URLS=http://+:$PORT
-
-# Variáveis de produção
-ENV ASPNETCORE_ENVIRONMENT=Production
-ENV DOTNET_RUNNING_IN_CONTAINER=true
-
-# Ponto de entrada
+# Entry point
 ENTRYPOINT ["dotnet", "PreSystem.StockControl.WebApi.dll"]
