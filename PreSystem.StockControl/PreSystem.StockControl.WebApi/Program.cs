@@ -2,9 +2,10 @@
 using PreSystem.StockControl.Application.Services;
 using PreSystem.StockControl.Domain.Interfaces.Repositories;
 using PreSystem.StockControl.Infrastructure.Repositories;
-using PreSystem.StockControl.WebApi.Configurations;
+using PreSystem.StockControl.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 using PreSystem.StockControl.Application.Validators;
 using FluentValidation;
@@ -18,71 +19,58 @@ if (builder.Environment.IsDevelopment())
     DotNetEnv.Env.Load();
 }
 
-// Configuração de environment variables
-builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>
-{
-    ["EmailSettings:SmtpUser"] = Environment.GetEnvironmentVariable("EMAIL_SMTP_USER"),
-    ["EmailSettings:SmtpPassword"] = Environment.GetEnvironmentVariable("EMAIL_SMTP_PASSWORD"),
-    ["EmailSettings:FromEmail"] = Environment.GetEnvironmentVariable("EMAIL_FROM"),
-    ["FrontendUrl"] = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000"
-});
+// CONFIGURAÇÃO 1: CONNECTION STRING
+var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+    ?? builder.Configuration.GetConnectionString("DefaultConnection");
 
-// Connection String dinâmica para Railway
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DATABASE_URL")))
+if (string.IsNullOrEmpty(connectionString))
 {
-    builder.Configuration["ConnectionStrings:DefaultConnection"] = Environment.GetEnvironmentVariable("DATABASE_URL");
+    throw new InvalidOperationException("Connection string not found");
 }
 
-// JWT Secret dinâmico
-if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("JWT_SECRET")))
-{
-    builder.Configuration["JwtSettings:Secret"] = Environment.GetEnvironmentVariable("JWT_SECRET");
-}
+// CONFIGURAÇÃO 2: ENTITY FRAMEWORK
+builder.Services.AddDbContext<StockControlDbContext>(options =>
+    options.UseNpgsql(connectionString));
 
-// Registro de dependências da aplicação
+// CONFIGURAÇÃO 3: REPOSITORIES E SERVICES
 builder.Services.AddScoped<IComponentRepository, ComponentRepository>();
 builder.Services.AddScoped<IComponentService, ComponentService>();
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<IUserContextService, UserContextService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPasswordResetTokenRepository, PasswordResetTokenRepository>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IUserContextService, UserContextService>();
 
-// CORS dinâmico para produção
+// CONFIGURAÇÃO 4: CONTROLLERS E VALIDAÇÃO
+builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>();
+builder.Services.AddFluentValidationAutoValidation();
+
+// CONFIGURAÇÃO 5: CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", corsBuilder =>
     {
         var frontendUrl = Environment.GetEnvironmentVariable("FRONTEND_URL") ?? "http://localhost:3000";
-        var allowedOrigins = new List<string>
-        {
-            "http://localhost:3000",
-            "http://localhost:5173",
-            frontendUrl
-        };
 
-        if (builder.Environment.IsProduction())
-        {
-            allowedOrigins.Add("https://*.pages.dev");
-            allowedOrigins.Add("https://*.workers.dev");
-        }
-
-        corsBuilder.WithOrigins(allowedOrigins.ToArray())
+        corsBuilder.WithOrigins(
+                "http://localhost:3000",
+                "http://localhost:5173",
+                frontendUrl
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
+
+        if (builder.Environment.IsProduction())
+        {
+            corsBuilder.WithOrigins("https://*.pages.dev");
+        }
     });
 });
 
-// Serviços padrões da aplicação
-builder.Services.AddProjectDependencies(builder.Configuration);
-builder.Services.AddControllers();
-
-builder.Services.AddValidatorsFromAssemblyContaining<ProductCreateDtoValidator>();
-builder.Services.AddFluentValidationAutoValidation();
-
-// Documentação da API com Swagger
+// CONFIGURAÇÃO 6: SWAGGER
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -90,8 +78,7 @@ builder.Services.AddSwaggerGen(c =>
 
     c.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
     {
-        Description = @"JWT Authorization header usando o esquema Bearer. 
-Digite assim: 'Bearer {seu token}' (sem aspas)",
+        Description = "JWT Authorization header using the Bearer scheme.",
         Name = "Authorization",
         In = Microsoft.OpenApi.Models.ParameterLocation.Header,
         Type = Microsoft.OpenApi.Models.SecuritySchemeType.ApiKey,
@@ -117,14 +104,16 @@ Digite assim: 'Bearer {seu token}' (sem aspas)",
     });
 });
 
-// Configuração JWT
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings.GetValue<string>("Secret");
+// CONFIGURAÇÃO 7: JWT
+var jwtSecret = Environment.GetEnvironmentVariable("JWT_SECRET")
+    ?? builder.Configuration.GetSection("JwtSettings")["Secret"];
 
-if (string.IsNullOrEmpty(secretKey))
-    throw new InvalidOperationException("JWT Secret Key is missing in configuration");
+if (string.IsNullOrEmpty(jwtSecret))
+{
+    throw new InvalidOperationException("JWT Secret is required");
+}
 
-var key = Encoding.ASCII.GetBytes(secretKey);
+var key = Encoding.ASCII.GetBytes(jwtSecret);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -141,14 +130,15 @@ builder.Services.AddAuthentication(options =>
         IssuerSigningKey = new SymmetricSecurityKey(key),
         ValidateIssuer = true,
         ValidateAudience = true,
-        ValidIssuer = jwtSettings.GetValue<string>("Issuer"),
-        ValidAudience = jwtSettings.GetValue<string>("Audience")
+        ValidIssuer = builder.Configuration.GetSection("JwtSettings")["Issuer"] ?? "PreSystem",
+        ValidAudience = builder.Configuration.GetSection("JwtSettings")["Audience"] ?? "PreSystem"
     };
 });
 
+// BUILD DA APLICAÇÃO
 var app = builder.Build();
 
-// Swagger apenas em desenvolvimento
+// CONFIGURAÇÃO 8: MIDDLEWARE
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -157,7 +147,6 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
-// HTTPS redirection apenas em produção
 if (app.Environment.IsProduction())
 {
     app.UseHttpsRedirection();
@@ -165,10 +154,9 @@ if (app.Environment.IsProduction())
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
 
-// PORT dinâmica para Railway
+// CONFIGURAÇÃO 9: PORTA DINÂMICA
 var port = Environment.GetEnvironmentVariable("PORT") ?? "5123";
 var url = $"http://0.0.0.0:{port}";
 

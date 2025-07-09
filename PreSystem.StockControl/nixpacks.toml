@@ -1,9 +1,2 @@
-[phases.build]
-cmds = [
-    'dotnet --version',
-    'dotnet restore PreSystem.StockControl.sln',
-    'dotnet publish PreSystem.StockControl.WebApi/PreSystem.StockControl.WebApi.csproj -c Release -o /app/publish'
-]
-
 [start]
 cmd = 'dotnet /app/publish/PreSystem.StockControl.WebApi.dll'
