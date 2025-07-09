@@ -3,10 +3,6 @@
   "WorkspaceRootPath": "C:\\Projetos\\PreSystem.StockControl\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\presystem.stockcontrol.webapi.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\presystem.stockcontrol.webapi.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
@@ -17,6 +13,14 @@
     {
       "AbsoluteMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|solutionrelative:presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{9E9AEC17-710B-45FA-A8CB-6E633A9B79FB}|PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.domain\\presystem.stockcontrol.domain.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{9E9AEC17-710B-45FA-A8CB-6E633A9B79FB}|PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj|solutionrelative:presystem.stockcontrol.domain\\presystem.stockcontrol.domain.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\appsettings.production.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
@@ -250,53 +254,54 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 5,
+          "SelectedChildIndex": 2,
           "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "PreSystem.StockControl.Domain",
+              "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
+              "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
+              "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
+              "RelativeToolTip": "PreSystem.StockControl.Domain\\PreSystem.StockControl.Domain.csproj",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
+              "WhenOpened": "2025-07-09T17:15:38.394Z",
+              "EditorCaption": ""
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "PreSystem.StockControl.WebApi.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAuwBUAAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAABQAAAAAAAAAAADgvxoAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-09T02:29:20.904Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 2,
               "Title": "PreSystem.StockControl.Infrastructure.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
               "RelativeToolTip": "PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAuwBkAAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAABQAAAAAAAAAAADgvxoAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-09T02:29:05.96Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
-              "Title": "appsettings.Production.json",
-              "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\appsettings.Production.json",
-              "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\appsettings.Production.json",
-              "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\appsettings.Production.json",
-              "RelativeToolTip": "PreSystem.StockControl.WebApi\\appsettings.Production.json",
-              "ViewState": "AgIAABQAAAAAAAAAAAAQwCEAAAAtAAAAAAAAAA==",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-07-02T04:21:22.542Z"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 18,
               "Title": "EmailService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\EmailService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\EmailService.cs",
@@ -308,7 +313,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 4,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Program.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Program.cs",
@@ -321,7 +326,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 24,
               "Title": "IStockMovementRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IStockMovementRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IStockMovementRepository.cs",
@@ -333,7 +338,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 7,
               "Title": "appsettings.json",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\appsettings.json",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\appsettings.json",
@@ -345,20 +350,32 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 1,
               "Title": "PreSystem.StockControl.Application.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeToolTip": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAABEAAAAAAAAAAADgvxcAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-06-12T04:40:40.063Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 5,
+              "Title": "appsettings.Production.json",
+              "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\appsettings.Production.json",
+              "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\appsettings.Production.json",
+              "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\appsettings.Production.json",
+              "RelativeToolTip": "PreSystem.StockControl.WebApi\\appsettings.Production.json",
+              "ViewState": "AgIAABQAAAAAAAAAAAAQwCEAAAAtAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-07-02T04:21:22.542Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
               "Title": "IStockMovementService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IStockMovementService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IStockMovementService.cs",
@@ -370,7 +387,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 6,
               "Title": ".env",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\.env",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\.env",
@@ -382,7 +399,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 12,
               "Title": "UserController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\UserController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\UserController.cs",
@@ -394,7 +411,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 9,
               "Title": "DependencyInjectionConfiguration.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Configurations\\DependencyInjectionConfiguration.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Configurations\\DependencyInjectionConfiguration.cs",
@@ -406,7 +423,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 8,
               "Title": ".env.example",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\.env.example",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\.env.example",
@@ -418,7 +435,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 10,
               "Title": "StockControlDbContextFactory.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Persistence\\StockControlDbContextFactory.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Persistence\\StockControlDbContextFactory.cs",
@@ -430,7 +447,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 14,
               "Title": "IUserRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IUserRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IUserRepository.cs",
@@ -442,7 +459,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 11,
               "Title": "StockControlDbContext.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Persistence\\StockControlDbContext.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Persistence\\StockControlDbContext.cs",
@@ -454,7 +471,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 13,
               "Title": "UserRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Repositories\\UserRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Repositories\\UserRepository.cs",
@@ -466,7 +483,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 20,
               "Title": "StockMovementController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\StockMovementController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\StockMovementController.cs",
@@ -478,7 +495,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 16,
               "Title": "IUserService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IUserService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IUserService.cs",
@@ -490,7 +507,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 15,
               "Title": "UserService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\UserService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\UserService.cs",
@@ -502,7 +519,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 23,
               "Title": "StockMovementRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Repositories\\StockMovementRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Repositories\\StockMovementRepository.cs",
@@ -514,7 +531,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 17,
               "Title": "launchSettings.json",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Properties\\launchSettings.json",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Properties\\launchSettings.json",
@@ -526,7 +543,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 19,
               "Title": "StockMovementService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\StockMovementService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\StockMovementService.cs",
@@ -538,7 +555,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 22,
               "Title": "PartialStockDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\PartialStockDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\PartialStockDto.cs",
@@ -550,7 +567,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 26,
               "Title": "StockAlertController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\StockAlertController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\StockAlertController.cs",
@@ -562,7 +579,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 27,
               "Title": "ComponentService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\ComponentService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\ComponentService.cs",
@@ -574,7 +591,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 28,
               "Title": "AlertManagerService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\AlertManagerService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\AlertManagerService.cs",
@@ -586,7 +603,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 29,
               "Title": "IAlertManagerService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IAlertManagerService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IAlertManagerService.cs",
@@ -598,7 +615,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 25,
               "Title": "BulkMovementResultDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\BulkMovementResultDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\BulkMovementResultDto.cs",
@@ -610,7 +627,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 30,
               "Title": "AuthController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\AuthController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\AuthController.cs",
@@ -622,7 +639,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 31,
+              "DocumentIndex": 32,
               "Title": "IStockAlertService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IStockAlertService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IStockAlertService.cs",
@@ -634,7 +651,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 31,
               "Title": "IEmailService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IEmailService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IEmailService.cs",
@@ -646,7 +663,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 32,
+              "DocumentIndex": 33,
               "Title": "PasswordResetValidators.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Validators\\PasswordResetValidators.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Validators\\PasswordResetValidators.cs",
@@ -658,7 +675,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 33,
+              "DocumentIndex": 34,
               "Title": "PasswordResetDtos.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\PasswordResetDtos.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\PasswordResetDtos.cs",
@@ -670,7 +687,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 34,
+              "DocumentIndex": 35,
               "Title": "PasswordResetTokenRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Repositories\\PasswordResetTokenRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Repositories\\PasswordResetTokenRepository.cs",
@@ -682,7 +699,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 35,
+              "DocumentIndex": 36,
               "Title": "IPasswordResetTokenRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IPasswordResetTokenRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IPasswordResetTokenRepository.cs",
@@ -694,7 +711,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 36,
+              "DocumentIndex": 37,
               "Title": "PasswordResetToken.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Entities\\PasswordResetToken.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Entities\\PasswordResetToken.cs",
@@ -706,7 +723,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 39,
+              "DocumentIndex": 40,
               "Title": "IComponentService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IComponentService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IComponentService.cs",
@@ -718,7 +735,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 38,
+              "DocumentIndex": 39,
               "Title": "GroupHierarchyController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\GroupHierarchyController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\GroupHierarchyController.cs",
@@ -730,7 +747,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 37,
+              "DocumentIndex": 38,
               "Title": "ProductController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\ProductController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\ProductController.cs",
@@ -742,7 +759,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 40,
+              "DocumentIndex": 41,
               "Title": "BulkOperationDTOs.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\BulkOperationDTOs.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\BulkOperationDTOs.cs",
@@ -754,7 +771,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 41,
+              "DocumentIndex": 42,
               "Title": "ComponentDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\ComponentDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\ComponentDto.cs",
@@ -766,7 +783,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 42,
+              "DocumentIndex": 43,
               "Title": "ComponentController.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Controllers\\ComponentController.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Controllers\\ComponentController.cs",
@@ -778,7 +795,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 43,
+              "DocumentIndex": 44,
               "Title": "StockAlertService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\StockAlertService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\StockAlertService.cs",
@@ -790,7 +807,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 44,
+              "DocumentIndex": 45,
               "Title": "PurchaseListDtos.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\PurchaseListDtos.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\PurchaseListDtos.cs",
@@ -802,7 +819,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 45,
+              "DocumentIndex": 46,
               "Title": "StockMovementDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\StockMovementDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\StockMovementDto.cs",
@@ -814,7 +831,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 47,
+              "DocumentIndex": 48,
               "Title": "IGroupHierarchyService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Interfaces\\Services\\IGroupHierarchyService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Interfaces\\Services\\IGroupHierarchyService.cs",
@@ -826,7 +843,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 46,
+              "DocumentIndex": 47,
               "Title": "GroupHierarchyService.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Services\\GroupHierarchyService.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Services\\GroupHierarchyService.cs",
@@ -838,7 +855,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 48,
+              "DocumentIndex": 49,
               "Title": "GroupHierarchyRepositories.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Repositories\\GroupHierarchyRepositories.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Repositories\\GroupHierarchyRepositories.cs",
@@ -850,7 +867,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 49,
+              "DocumentIndex": 50,
               "Title": "IGroupHierarchyRepositories.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IGroupHierarchyRepositories.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IGroupHierarchyRepositories.cs",
@@ -862,7 +879,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 50,
+              "DocumentIndex": 51,
               "Title": "GroupHierarchyDtos.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\GroupHierarchyDtos.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\GroupHierarchyDtos.cs",
@@ -874,7 +891,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 51,
+              "DocumentIndex": 52,
               "Title": "GroupHierarchy.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Entities\\GroupHierarchy.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Entities\\GroupHierarchy.cs",
@@ -886,7 +903,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 52,
+              "DocumentIndex": 53,
               "Title": "ComponentRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\Repositories\\ComponentRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\Repositories\\ComponentRepository.cs",
@@ -898,7 +915,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 55,
+              "DocumentIndex": 56,
               "Title": "IComponentRepository.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IComponentRepository.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Interfaces\\Repositories\\IComponentRepository.cs",
@@ -910,7 +927,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 53,
+              "DocumentIndex": 54,
               "Title": "ComponentFilterDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\Filters\\ComponentFilterDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\Filters\\ComponentFilterDto.cs",
@@ -922,7 +939,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 54,
+              "DocumentIndex": 55,
               "Title": "ComponentCreateDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\ComponentCreateDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\ComponentCreateDto.cs",
@@ -934,7 +951,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 56,
+              "DocumentIndex": 57,
               "Title": "Component.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Domain\\Entities\\Component.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Domain\\Entities\\Component.cs",
@@ -946,7 +963,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 57,
+              "DocumentIndex": 58,
               "Title": "PreSystem.StockControl.WebApi.http",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.http",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.http",
@@ -958,7 +975,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 58,
+              "DocumentIndex": 59,
               "Title": "ValidatePasswordDtoValidator.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\Validators\\ValidatePasswordDtoValidator.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\Validators\\ValidatePasswordDtoValidator.cs",
@@ -970,7 +987,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 59,
+              "DocumentIndex": 60,
               "Title": "ValidatePasswordDto.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\DTOs\\ValidatePasswordDto.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\DTOs\\ValidatePasswordDto.cs",
