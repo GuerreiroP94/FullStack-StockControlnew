@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dgSpecHash": "p9lX0srfyHY=",
-  "success": false,
+  "dgSpecHash": "bnXytqmbMRI=",
+  "success": true,
   "projectFilePath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\GabrielG\\.nuget\\packages\\bcrypt.net-next\\4.0.3\\bcrypt.net-next.4.0.3.nupkg.sha512",
@@ -22,11 +22,10 @@
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.caching.memory\\8.0.1\\microsoft.extensions.caching.memory.8.0.1.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.configuration\\1.1.2\\microsoft.extensions.configuration.1.1.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
-    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.configuration.binder\\8.0.0\\microsoft.extensions.configuration.binder.8.0.0.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\8.0.1\\microsoft.extensions.dependencyinjection.8.0.1.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.logging\\8.0.1\\microsoft.extensions.logging.8.0.1.nupkg.sha512",
-    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.2\\microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.options\\8.0.2\\microsoft.extensions.options.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.primitives\\8.0.0\\microsoft.extensions.primitives.8.0.0.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.identitymodel.abstractions\\7.1.2\\microsoft.identitymodel.abstractions.7.1.2.nupkg.sha512",
@@ -120,17 +119,5 @@
     "C:\\Users\\GabrielG\\.nuget\\packages\\system.xml.readerwriter\\4.3.0\\system.xml.readerwriter.4.3.0.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\system.xml.xdocument\\4.3.0\\system.xml.xdocument.4.3.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1605",
-      "level": "Error",
-      "message": "Aviso como Erro: Downgrade de pacote detectado: Microsoft.Extensions.Logging.Abstractions de 8.0.2 para 8.0.0. Referencie o pacote diretamente do projeto para selecionar uma versão diferente. \r\n PreSystem.StockControl.WebApi -> PreSystem.StockControl.Infrastructure -> Microsoft.EntityFrameworkCore 8.0.10 -> Microsoft.Extensions.Caching.Memory 8.0.1 -> Microsoft.Extensions.Logging.Abstractions (>= 8.0.2) \r\n PreSystem.StockControl.WebApi -> Microsoft.Extensions.Logging.Abstractions (>= 8.0.0)",
-      "projectPath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
-      "filePath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
-      "libraryId": "Microsoft.Extensions.Logging.Abstractions",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    }
-  ]
+  "logs": []
 }

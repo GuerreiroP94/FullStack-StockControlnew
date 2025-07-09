@@ -1,7 +1,7 @@
 {
   "version": 2,
-  "dgSpecHash": "jL9swVH3nJg=",
-  "success": false,
+  "dgSpecHash": "Fb6QU6Cuz9k=",
+  "success": true,
   "projectFilePath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\GabrielG\\.nuget\\packages\\humanizer.core\\2.14.1\\humanizer.core.2.14.1.nupkg.sha512",
@@ -21,10 +21,10 @@
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.caching.memory\\8.0.1\\microsoft.extensions.caching.memory.8.0.1.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.configuration.abstractions\\8.0.0\\microsoft.extensions.configuration.abstractions.8.0.0.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.dependencyinjection\\8.0.1\\microsoft.extensions.dependencyinjection.8.0.1.nupkg.sha512",
-    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.0\\microsoft.extensions.dependencyinjection.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.dependencyinjection.abstractions\\8.0.2\\microsoft.extensions.dependencyinjection.abstractions.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.dependencymodel\\8.0.2\\microsoft.extensions.dependencymodel.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.logging\\8.0.1\\microsoft.extensions.logging.8.0.1.nupkg.sha512",
-    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.0\\microsoft.extensions.logging.abstractions.8.0.0.nupkg.sha512",
+    "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.logging.abstractions\\8.0.2\\microsoft.extensions.logging.abstractions.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.options\\8.0.2\\microsoft.extensions.options.8.0.2.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\microsoft.extensions.primitives\\8.0.0\\microsoft.extensions.primitives.8.0.0.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\mono.texttemplating\\2.2.1\\mono.texttemplating.2.2.1.nupkg.sha512",
@@ -44,28 +44,5 @@
     "C:\\Users\\GabrielG\\.nuget\\packages\\system.text.encoding.codepages\\6.0.0\\system.text.encoding.codepages.6.0.0.nupkg.sha512",
     "C:\\Users\\GabrielG\\.nuget\\packages\\system.threading.channels\\6.0.0\\system.threading.channels.6.0.0.nupkg.sha512"
   ],
-  "logs": [
-    {
-      "code": "NU1605",
-      "level": "Error",
-      "message": "Aviso como Erro: Downgrade de pacote detectado: Microsoft.Extensions.DependencyInjection.Abstractions de 8.0.2 para 8.0.0. Referencie o pacote diretamente do projeto para selecionar uma versão diferente. \r\n PreSystem.StockControl.Infrastructure -> Microsoft.EntityFrameworkCore 8.0.10 -> Microsoft.Extensions.Caching.Memory 8.0.1 -> Microsoft.Extensions.DependencyInjection.Abstractions (>= 8.0.2) \r\n PreSystem.StockControl.Infrastructure -> Microsoft.Extensions.DependencyInjection.Abstractions (>= 8.0.0)",
-      "projectPath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
-      "filePath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
-      "libraryId": "Microsoft.Extensions.DependencyInjection.Abstractions",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    },
-    {
-      "code": "NU1605",
-      "level": "Error",
-      "message": "Aviso como Erro: Downgrade de pacote detectado: Microsoft.Extensions.Logging.Abstractions de 8.0.2 para 8.0.0. Referencie o pacote diretamente do projeto para selecionar uma versão diferente. \r\n PreSystem.StockControl.Infrastructure -> Microsoft.EntityFrameworkCore 8.0.10 -> Microsoft.Extensions.Caching.Memory 8.0.1 -> Microsoft.Extensions.Logging.Abstractions (>= 8.0.2) \r\n PreSystem.StockControl.Infrastructure -> Microsoft.Extensions.Logging.Abstractions (>= 8.0.0)",
-      "projectPath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
-      "filePath": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
-      "libraryId": "Microsoft.Extensions.Logging.Abstractions",
-      "targetGraphs": [
-        "net8.0"
-      ]
-    }
-  ]
+  "logs": []
 }

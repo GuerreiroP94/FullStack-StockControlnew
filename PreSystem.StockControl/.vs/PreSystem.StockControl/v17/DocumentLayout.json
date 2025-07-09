@@ -3,20 +3,20 @@
   "WorkspaceRootPath": "C:\\Projetos\\PreSystem.StockControl\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|solutionrelative:presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\presystem.stockcontrol.webapi.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\presystem.stockcontrol.webapi.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|solutionrelative:presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+      "AbsoluteMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|solutionrelative:presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|solutionrelative:presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
       "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\appsettings.production.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
@@ -250,37 +250,37 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": 5,
           "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
             {
               "$type": "Document",
               "DocumentIndex": 1,
-              "Title": "PreSystem.StockControl.WebApi",
+              "Title": "PreSystem.StockControl.WebApi.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
-              "ViewState": "AgIAAAEAAAAAAAAAAAAuwB8AAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAuwBUAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-09T02:29:20.904Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
-              "Title": "PreSystem.StockControl.Infrastructure",
+              "DocumentIndex": 3,
+              "Title": "PreSystem.StockControl.Infrastructure.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
               "RelativeToolTip": "PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj",
-              "ViewState": "AgIAAAEAAAAAAAAAAAAuwB8AAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAuwBkAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-09T02:29:05.96Z",
               "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
             },
             {
               "$type": "Document",
@@ -292,8 +292,7 @@
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\appsettings.Production.json",
               "ViewState": "AgIAABQAAAAAAAAAAAAQwCEAAAAtAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-07-02T04:21:22.542Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-07-02T04:21:22.542Z"
             },
             {
               "$type": "Document",
@@ -309,13 +308,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 0,
               "Title": "Program.cs",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Program.cs",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\Program.cs",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\Program.cs",
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\Program.cs",
-              "ViewState": "AgIAANgAAAAAAAAAAAAUwOwAAAA2AAAAAAAAAA==",
+              "ViewState": "AgIAAKQAAAAAAAAAAAAUwLEAAAANAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-05-25T17:07:31.896Z",
               "EditorCaption": ""
@@ -346,13 +345,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 2,
               "Title": "PreSystem.StockControl.Application.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeToolTip": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
-              "ViewState": "AgIAAAkAAAAAAAAAAAAuwBUAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABIAAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-06-12T04:40:40.063Z",
               "EditorCaption": ""

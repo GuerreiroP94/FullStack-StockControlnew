@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Projetos\\PreSystem.StockControl\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
-      "RelativeMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|solutionrelative:presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.webapi\\presystem.stockcontrol.webapi.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
       "RelativeMoniker": "D:0:0:{E5519F3C-137F-4D51-A3D4-D6DD17EAE8B3}|PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj|solutionrelative:presystem.stockcontrol.webapi\\presystem.stockcontrol.webapi.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
+      "RelativeMoniker": "D:0:0:{37253B2D-87C5-42C4-B5A9-F553BB5C2F0C}|PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj|solutionrelative:presystem.stockcontrol.application\\presystem.stockcontrol.application.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|"
     },
     {
       "AbsoluteMoniker": "D:0:0:{5E9BA42F-A48E-4849-AAF5-23598139340C}|PreSystem.StockControl.Infrastructure\\PreSystem.StockControl.Infrastructure.csproj|c:\\projetos\\presystem.stockcontrol\\presystem.stockcontrol.infrastructure\\presystem.stockcontrol.infrastructure.csproj||{FA3CD31E-987B-443A-9B81-186104E8DAC1}|",
@@ -250,17 +250,17 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 8,
+          "SelectedChildIndex": 0,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "PreSystem.StockControl.WebApi",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
               "RelativeToolTip": "PreSystem.StockControl.WebApi\\PreSystem.StockControl.WebApi.csproj",
-              "ViewState": "AgIAAAEAAAAAAAAAAAAuwB8AAAAKAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAB8AAAAKAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-07-09T02:29:20.904Z",
               "EditorCaption": ""
@@ -346,13 +346,13 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "PreSystem.StockControl.Application.csproj",
               "DocumentMoniker": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeDocumentMoniker": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "ToolTip": "C:\\Projetos\\PreSystem.StockControl\\PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
               "RelativeToolTip": "PreSystem.StockControl.Application\\PreSystem.StockControl.Application.csproj",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAAkAAAAAAAAAAAAuwBUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000758|",
               "WhenOpened": "2025-06-12T04:40:40.063Z",
               "EditorCaption": ""
